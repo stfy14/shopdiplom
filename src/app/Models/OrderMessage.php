@@ -6,4 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 class OrderMessage extends Model
 {
     protected $fillable = ['order_id', 'sender_role', 'message'];
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
 }

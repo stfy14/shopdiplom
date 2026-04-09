@@ -4,17 +4,19 @@ import { Link, router, useForm } from '@inertiajs/vue3'
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 const chatBox = ref(null)
 
-watch(messages, async () => {
-    await nextTick()
-    if (chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight
-})
-
 const props = defineProps({
     order: Object,
 })
 
 const messages = ref(props.order.messages ?? [])
+
+watch(messages, async () => {
+    await nextTick()
+    if (chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight
+})
+
 const msgForm = useForm({ message: '' })
+
 let pollInterval = null
 
 const statusMap = {

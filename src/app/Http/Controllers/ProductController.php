@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Cart;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -32,7 +33,10 @@ class ProductController extends Controller
         $categories = Category::all();
 
         $cartItems = auth()->check()
-            ? Cart::where('user_id', auth()->id())->get()->keyBy('product_id')
+            ? Cart::with('product') // добавь with('product')
+                ->where('user_id', auth()->id())
+                ->get()
+                ->keyBy('product_id')
             : collect();
 
         return Inertia::render('Shop/Index', [

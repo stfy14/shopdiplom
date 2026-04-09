@@ -49,7 +49,10 @@ function sendMessage() {
 }
 
 onMounted(() => {
-    pollInterval = setInterval(loadMessages, 3000)
+    pollInterval = setInterval(() => {
+        loadMessages()
+        router.reload({ only: ['order'], preserveScroll: true }) // добавь
+    }, 3000)
 })
 
 onUnmounted(() => {

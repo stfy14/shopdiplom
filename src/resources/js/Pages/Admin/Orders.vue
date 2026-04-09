@@ -5,6 +5,18 @@ const props = defineProps({
     orders: Array,
 })
 
+let pollInterval = null
+
+onMounted(() => {
+    pollInterval = setInterval(() => {
+        router.reload({ preserveScroll: true })
+    }, 5000)
+})
+
+onUnmounted(() => {
+    clearInterval(pollInterval)
+})
+
 const statusMap = {
     new:               { label: 'Новый',          color: 'bg-blue-100 text-blue-700' },
     processing:        { label: 'В обработке',     color: 'bg-yellow-100 text-yellow-700' },

@@ -5,17 +5,18 @@ import { watch } from 'vue'
 import CartPopup from '@/Components/CartPopup.vue'
 import Toast from '@/Components/Toast.vue'
 
+const page = usePage()
+const toast = ref(null)
+
 watch(() => page.props.flash?.cart_added, (val) => {
     if (val) toast.value?.add(`${val} добавлен в корзину`, 'success')
 })
 
-const page = usePage()
 const user = computed(() => page.props.auth.user)
 const cartCount = computed(() => page.props.cartCount ?? 0)
 const cartItems = computed(() => page.props.cartItems ?? [])
 
 const cartOpen = ref(false)
-const toast = ref(null)
 
 // Глобальный метод для тоста — доступен через provide
 import { provide } from 'vue'

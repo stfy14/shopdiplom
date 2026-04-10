@@ -15,14 +15,21 @@ const props = defineProps({
 let pollInterval = null
 
 onMounted(() => {
-    // Раз в 3 секунд незаметно обновляем данные страницы (включая уведомления)
+    // Поллинг только для списка товаров — редко
     pollInterval = setInterval(() => {
-        router.reload({ preserveScroll: true, preserveState: true })
-    }, 3000)
+        router.reload({ only: ['products'], preserveScroll: true, preserveState: true })
+    }, 30000)
+
+    // Уведомления мгновенно через WebSocket
+    window.Echo.channel('admin-notifications')
+        .listen('NewOrderPlaced', (data) => {
+            router.reload({ only: ['adminNotifications'], preserveScroll: true, preserveState: true })
+        })
 })
 
 onUnmounted(() => {
     clearInterval(pollInterval)
+    window.Echo.leaveChannel('admin-notifications')
 })
 
 function formatPrice(price) {

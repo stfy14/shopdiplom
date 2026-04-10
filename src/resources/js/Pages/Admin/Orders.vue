@@ -121,7 +121,7 @@ function formatDate(dt) {
                     </div>
 
                     <!-- ПЛАВАЮЩИЕ ИКОНКИ УВЕДОМЛЕНИЙ (позиционируются абсолютно относительно всей плашки) -->
-                    <div class="absolute top-4 right-28 flex items-center gap-1.5">
+                    <div class="absolute -top-2 -right-2 flex items-center gap-1">
                         <div v-if="order.status === 'new'" class="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-sm text-[12px]" title="Новый заказ">
                             📦
                         </div>

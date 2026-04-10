@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderMessage;
+use App\Events\NewOrderMessage;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -69,11 +70,15 @@ class OrderController extends Controller
     {
         $request->validate(['message' => 'required|string']);
 
-        OrderMessage::create([
+        $message = OrderMessage::create([   // <-- должно быть $message =
             'order_id'    => $order->id,
-            'sender_role' => 'admin',
+            'sender_role' => 'user',
             'message'     => $request->message,
         ]);
+
+        $order->update(['has_unseen_activity' => true]);
+
+        broadcast(new NewOrderMessage($message));  // <-- использует $message
 
         return back();
     }

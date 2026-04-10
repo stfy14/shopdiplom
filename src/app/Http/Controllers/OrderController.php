@@ -6,6 +6,7 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderMessage;
+use App\Events\NewOrderMessage;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -65,6 +66,8 @@ class OrderController extends Controller
 
         Cart::where('user_id', auth()->id())->delete();
 
+        broadcast(new NewOrderPlaced($order));
+
         return redirect()->route('order.show', $order->uuid);
     }
 
@@ -111,6 +114,8 @@ class OrderController extends Controller
         ]);
 
         $order->update(['has_unseen_activity' => true]);
+
+        broadcast(new NewOrderMessage($message));
 
         return back();
     }

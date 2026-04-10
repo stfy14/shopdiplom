@@ -131,14 +131,26 @@ function sendMessage() {
 }
 
 onMounted(() => {
+    // Поллинг только статуса заказа — редко
     pollInterval = setInterval(() => {
-        loadMessages()
         router.reload({ only: ['order'], preserveScroll: true })
-    }, 3000)
+    }, 15000)
+
+    // Сообщения мгновенно через WebSocket
+    window.Echo.channel(`order.${props.order.id}`)
+        .listen('NewOrderMessage', (message) => {
+            const exists = messages.value.find(m => m.id === message.id)
+            if (!exists) messages.value.push(message)
+        })
+
     setTimeout(scrollToBottom, 300)
 })
 
-onUnmounted(() => clearInterval(pollInterval))
+onUnmounted(() => {
+    clearInterval(pollInterval)
+    window.Echo.leaveChannel(`order.${props.order.id}`)
+})
+
 watch(() => props.order.status, (newStatus) => { statusForm.status = newStatus })
 const st = computed(() => statusMap[props.order.status] ?? { label: props.order.status, color: 'bg-gray-100 text-gray-600' })
 </script>

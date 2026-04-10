@@ -1,14 +1,28 @@
 <script setup>
-import { Link, router } from '@inertiajs/vue3'
-import { ref } from 'vue'
-import { usePage } from '@inertiajs/vue3'
+import { Link, router, usePage } from '@inertiajs/vue3'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 
 const page = usePage()
-const notifications = page.props.adminNotifications
+
+// СЕКРЕТ КРОЕТСЯ ЗДЕСЬ: computed делает переменную реактивной!
+const notifications = computed(() => page.props.adminNotifications)
 
 const props = defineProps({
     products: Array,
     tab: String,
+})
+
+let pollInterval = null
+
+onMounted(() => {
+    // Раз в 3 секунд незаметно обновляем данные страницы (включая уведомления)
+    pollInterval = setInterval(() => {
+        router.reload({ preserveScroll: true, preserveState: true })
+    }, 3000)
+})
+
+onUnmounted(() => {
+    clearInterval(pollInterval)
 })
 
 function formatPrice(price) {

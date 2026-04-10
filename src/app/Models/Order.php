@@ -7,7 +7,8 @@ use Illuminate\Support\Str;
 class Order extends Model
 {
     protected $fillable = [
-        'uuid', 'user_id', 'address', 'phone', 'total_price', 'status'
+        'uuid', 'user_id', 'phone', 'total_price', 'status',
+        'city', 'street', 'house', 'comment'
     ];
 
     protected static function boot()
@@ -31,5 +32,12 @@ class Order extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function unreadMessages()
+    {
+        return $this->hasMany(OrderMessage::class)
+            ->where('sender_role', 'user')
+            ->where('is_read', false);
     }
 }

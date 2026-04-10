@@ -1,13 +1,13 @@
 <script setup>
 import ShopLayout from '@/Layouts/ShopLayout.vue'
 import { Link, router } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
     products: Array,
     categories: Array,
     filters: Object,
-    cartItems: Object,
+    cartItems: [Array, Object], // Разрешаем принимать и массив, и объект
 })
 
 const search = ref(props.filters?.q ?? '')
@@ -20,8 +20,15 @@ function formatPrice(price) {
     return new Intl.NumberFormat('ru-RU').format(price)
 }
 
+// 1. Приводим данные корзины к единому формату (массиву)
+const normalizedCartItems = computed(() => {
+    if (!props.cartItems) return[]
+    return Array.isArray(props.cartItems) ? props.cartItems : Object.values(props.cartItems)
+})
+
+// 2. Обновляем getCartItem: теперь ищем товар внутри нормализованного массива
 function getCartItem(productId) {
-    return props.cartItems?.[productId] ?? null
+    return normalizedCartItems.value.find(item => item.product_id === productId) ?? null
 }
 </script>
 

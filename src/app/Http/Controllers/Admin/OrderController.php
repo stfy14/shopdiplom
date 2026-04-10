@@ -10,19 +10,38 @@ use Inertia\Inertia;
 
 class OrderController extends Controller
 {
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
-        $orders = Order::with('user')
-            ->latest()
-            ->get();
+        $tab = $request->get('tab', 'active'); // Получаем текущую вкладку
 
-        return Inertia::render('Admin/Orders', [
+        $query = \App\Models\Order::with('user')
+            ->withCount('unreadMessages')
+            ->latest();
+
+        // Фильтруем в зависимости от вкладки
+        if ($tab === 'archive') {
+            $query->whereIn('status', ['cancelled', 'cancelled_by_user']);
+        } else {
+            $query->whereNotIn('status', ['cancelled', 'cancelled_by_user']);
+        }
+
+        $orders = $query->get();
+
+        return inertia('Admin/Orders',[
             'orders' => $orders,
+            'tab'    => $tab,
         ]);
     }
 
     public function show(Order $order)
     {
+        // Сбрасываем флаги ПЕРЕД загрузкой данных
+        if ($order->has_unseen_activity) {
+            $order->update(['has_unseen_activity' => false]);
+        }
+        $order->unreadMessages()->update(['is_read' => true]);
+
+        // Подгружаем данные для Vue уже с "чистыми" флагами
         $order->load(['user', 'items.product', 'messages']);
 
         return Inertia::render('Admin/OrderView', [
@@ -55,6 +74,21 @@ class OrderController extends Controller
             'sender_role' => 'admin',
             'message'     => $request->message,
         ]);
+
+        return back();
+    }
+
+    public function updateContacts(Order $order, Request $request)
+    {
+        $request->validate([
+            'city'    => 'required|string|max:100',
+            'street'  => 'required|string|max:255',
+            'house'   => 'required|string|max:50',
+            'comment' => 'nullable|string|max:1000',
+            'phone'   => ['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
+        ]);
+
+        $order->update($request->only(['city', 'street', 'house', 'comment', 'phone']));
 
         return back();
     }

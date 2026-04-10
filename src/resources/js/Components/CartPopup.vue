@@ -1,19 +1,25 @@
 <script setup>
 import { Link, router } from '@inertiajs/vue3'
-import { ref, watch } from 'vue'
+import { computed } from 'vue'
 
 const props = defineProps({
-    items: Array,
+    items:[Array, Object], // Разрешаем принимать и массив, и объект
     show: Boolean,
 })
 
 const emit = defineEmits(['close'])
 
+// Приводим данные к массиву в любом случае
+const normalizedItems = computed(() => {
+    if (!props.items) return[]
+    return Array.isArray(props.items) ? props.items : Object.values(props.items)
+})
+
 function formatPrice(price) {
     return new Intl.NumberFormat('ru-RU').format(price)
 }
 
-const total = () => (props.items ?? []).reduce((sum, item) => {
+const total = () => normalizedItems.value.reduce((sum, item) => {
     return sum + (item.product?.price ?? 0) * item.quantity
 }, 0)
 
@@ -40,14 +46,15 @@ function removeItem(productId) {
                 </div>
 
                 <div class="flex-grow overflow-y-auto p-4">
-                    <div v-if="!items || items.length === 0" class="flex flex-col items-center justify-center h-full text-gray-400">
+                    <!-- Заменили items на normalizedItems -->
+                    <div v-if="normalizedItems.length === 0" class="flex flex-col items-center justify-center h-full text-gray-400">
                         <div class="text-5xl mb-3">🛒</div>
                         <div>Корзина пуста</div>
                     </div>
 
                     <div v-else class="flex flex-col gap-3">
                         <div
-                            v-for="item in items"
+                            v-for="item in normalizedItems"
                             :key="item.id"
                             class="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50"
                         >
@@ -69,7 +76,8 @@ function removeItem(productId) {
                     </div>
                 </div>
 
-                <div v-if="items && items.length > 0" class="p-4 border-t">
+                <!-- Заменили items на normalizedItems -->
+                <div v-if="normalizedItems.length > 0" class="p-4 border-t">
                     <div class="flex justify-between mb-4">
                         <span class="text-gray-500">Итого:</span>
                         <span class="font-bold text-xl">{{ formatPrice(total()) }} ₽</span>

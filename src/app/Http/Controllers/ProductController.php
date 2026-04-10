@@ -12,38 +12,32 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::with('category')
-            ->where('is_deleted', false);
+        $q = $request->get('q');
+        $cat = $request->get('cat');
 
-        if ($request->filled('q')) {
-            $search = str_replace(['ё', 'Ё'], ['е', 'Е'], $request->q);
-            $query->where(function($q) use ($search) {
-                $q->whereRaw("REPLACE(LOWER(title), 'ё', 'е') LIKE ?", ['%' . mb_strtolower($search) . '%'])
-                ->orWhereRaw("REPLACE(LOWER(description), 'ё', 'е') LIKE ?", ['%' . mb_strtolower($search) . '%']);
+        $query = \App\Models\Product::with('category')->where('is_deleted', false);
+
+        if ($cat) {
+            $query->whereHas('category', function($query) use ($cat) {
+                $query->where('code', $cat);
             });
         }
 
-        if ($request->filled('cat')) {
-            $query->whereHas('category', function($q) use ($request) {
-                $q->where('code', $request->cat);
-            });
+        if ($q) {
+            // Приводим запрос к нижнему регистру и меняем ё на е
+            $qClean = mb_strtolower(str_replace('ё', 'е', $q));
+            
+            $query->whereRaw("REPLACE(LOWER(title), 'ё', 'е') LIKE ?", ['%' . $qClean . '%'])
+                ->orWhereRaw("REPLACE(LOWER(description), 'ё', 'е') LIKE ?", ['%' . $qClean . '%']);
         }
 
         $products = $query->latest()->get();
-        $categories = Category::all();
 
-        $cartItems = auth()->check()
-            ? Cart::with('product') // добавь with('product')
-                ->where('user_id', auth()->id())
-                ->get()
-                ->keyBy('product_id')
-            : collect();
-
-        return Inertia::render('Shop/Index', [
-            'products'   => $products,
-            'categories' => $categories,
-            'filters'    => $request->only(['q', 'cat']),
-            'cartItems'  => $cartItems,
+        return Inertia::render('Shop/Index',[
+            'products' => $products,
+            'categories' => \App\Models\Category::all(),
+            'filters' => $request->only(['q', 'cat']),
+            // СТРОКУ С cartItems ОТСЮДА УДАЛИЛИ
         ]);
     }
 

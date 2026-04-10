@@ -13,9 +13,10 @@ class CartController extends Controller
     {
         $items = Cart::with('product.category')
             ->where('user_id', auth()->id())
+            ->orderBy('id', 'asc') // ВАЖНО! Это не даст товарам "прыгать"
             ->get();
 
-        return Inertia::render('Shop/Cart', [
+        return Inertia::render('Shop/Cart',[
             'items' => $items,
         ]);
     }

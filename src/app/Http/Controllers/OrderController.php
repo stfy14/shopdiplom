@@ -30,8 +30,11 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'address' => 'required|string',
-            'phone'   => ['required', 'string', 'regex:/^\+?[\d\s\(\)\-]{10,18}$/'],
+            'city'    => 'required|string|max:100',
+            'street'  => 'required|string|max:255',
+            'house'   => 'required|string|max:50',
+            'comment' => 'nullable|string|max:1000',
+            'phone'   => ['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
         ]);
 
         $items = Cart::with('product')
@@ -42,7 +45,10 @@ class OrderController extends Controller
 
         $order = Order::create([
             'user_id'     => auth()->id(),
-            'address'     => $request->address,
+            'city'        => $request->city,
+            'street'      => $request->street,
+            'house'       => $request->house,
+            'comment'     => $request->comment,
             'phone'       => $request->phone,
             'total_price' => $total,
             'status'      => 'new',
@@ -80,7 +86,10 @@ class OrderController extends Controller
             abort(403);
         }
 
-        $order->update(['status' => 'cancelled_by_user']);
+        $order->update([
+            'status' => 'cancelled_by_user',
+            'has_unseen_activity' => true // Добавляем флаг
+        ]);
 
         return back();
     }
@@ -101,23 +110,32 @@ class OrderController extends Controller
             'message'     => $request->message,
         ]);
 
+        $order->update(['has_unseen_activity' => true]);
+
         return back();
     }
 
     public function updateContacts(Order $order, Request $request)
     {
-        if ($order->user_id !== auth()->id()) abort(403);
-
-        if (!in_array($order->status, ['new', 'processing'])) {
-            abort(403, 'Нельзя изменить контакты на этом этапе');
+        if ($order->user_id !== auth()->id() || !in_array($order->status, ['new', 'processing'])) {
+            abort(403);
         }
 
         $request->validate([
-            'address' => 'required|string|min:10',
-            'phone'   => ['required', 'string', 'regex:/^\+?[\d\s\(\)\-]{10,18}$/'],
+            'city'    => 'required|string|max:100',
+            'street'  => 'required|string|max:255',
+            'house'   => 'required|string|max:50',
+            'comment' => 'nullable|string|max:1000',
+            'phone'   => ['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
         ]);
 
-        $order->update($request->only('address', 'phone'));
-        return back()->with('success', 'Контакты обновлены');
+        $order->update($request->only(['city', 'street', 'house', 'comment', 'phone']));
+
+        // Взводим флаг, если юзер сам поменял данные
+        if ($order->user_id === auth()->id()) {
+            $order->update(['has_unseen_activity' => true]);
+        }
+
+        return back();
     }
 }

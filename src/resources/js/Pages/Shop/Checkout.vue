@@ -8,7 +8,10 @@ const props = defineProps({
 })
 
 const form = useForm({
-    address: '',
+    city: '',
+    street: '',
+    house: '',
+    comment: '',
     phone: '',
 })
 
@@ -72,47 +75,32 @@ function phoneInput(e) {
             <!-- Форма -->
             <div class="bg-white rounded-2xl shadow-sm p-6">
                 <h2 class="font-bold mb-4 text-gray-700">Данные доставки</h2>
-
-                <div class="mb-4">
-                    <label class="block text-sm text-gray-500 font-medium mb-1">
-                        📍 Адрес доставки
-                    </label>
-                    <textarea
-                        v-model="form.address"
-                        rows="3"
-                        placeholder="Город, улица, дом, квартира..."
-                        class="w-full px-4 py-3 rounded-xl bg-gray-50 border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
-                        :class="{ 'ring-2 ring-red-400': form.errors.address }"
-                    />
-                    <div v-if="form.errors.address" class="text-red-500 text-xs mt-1">
-                        {{ form.errors.address }}
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="col-span-2">
+                        <label class="block text-sm text-gray-500 mb-1">Город</label>
+                        <input v-model="form.city" type="text" placeholder="Москва" class="w-full px-4 py-2.5 bg-gray-50 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500"/>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-500 mb-1">Улица</label>
+                        <input v-model="form.street" type="text" placeholder="Ленина" class="w-full px-4 py-2.5 bg-gray-50 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500"/>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-500 mb-1">Дом, квартира</label>
+                        <input v-model="form.house" type="text" placeholder="1, кв. 23" class="w-full px-4 py-2.5 bg-gray-50 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500"/>
+                    </div>
+                    <div class="col-span-2">
+                         <label class="block text-sm text-gray-500 mb-1">Комментарий (необязательно)</label>
+                        <textarea v-model="form.comment" rows="2" placeholder="Код домофона, подъезд..." class="w-full px-4 py-2.5 bg-gray-50 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500 resize-none"></textarea>
                     </div>
                 </div>
 
                 <div class="mb-6">
-                    <label class="block text-sm text-gray-500 font-medium mb-1">
-                        📞 Телефон
-                    </label>
-                    <input
-                        type="tel"
-                        :value="form.phone"
-                        @input="phoneInput"
-                        placeholder="+7 (999) 000-00-00"
-                        maxlength="18"
-                        class="w-full px-4 py-3 rounded-xl bg-gray-50 border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        :class="{ 'ring-2 ring-red-400': form.errors.phone }"
-                    />
-                    <div v-if="form.errors.phone" class="text-red-500 text-xs mt-1">
-                        {{ form.errors.phone }}
-                    </div>
+                    <label class="block text-sm text-gray-500 mb-1">Телефон</label>
+                    <input type="tel" :value="form.phone" @input="phoneInput" placeholder="+7 (999) 000-00-00" maxlength="18" class="w-full px-4 py-2.5 bg-gray-50 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500" />
                 </div>
 
-                <button
-                    @click="submit"
-                    :disabled="form.processing"
-                    class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition disabled:opacity-50"
-                >
-                    {{ form.processing ? 'Оформляем...' : 'Подтвердить заказ' }}
+                <button @click="submit" :disabled="form.processing" class="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition">
+                    Подтвердить заказ
                 </button>
             </div>
         </div>

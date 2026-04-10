@@ -47,6 +47,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/orders/{order}/messages', [Admin\OrderController::class, 'getMessages'])->name('orders.messages');
     Route::post('/orders/{order}/messages', [Admin\OrderController::class, 'sendMessage'])->name('orders.send-message');
 
+    Route::patch('/orders/{order}/contacts', [Admin\OrderController::class, 'updateContacts'])->name('orders.contacts');
+
     Route::get('/categories', [Admin\CategoryController::class, 'index'])->name('categories');
     Route::post('/categories', [Admin\CategoryController::class, 'store'])->name('categories.store');
     Route::delete('/categories/{category}', [Admin\CategoryController::class, 'destroy'])->name('categories.destroy');

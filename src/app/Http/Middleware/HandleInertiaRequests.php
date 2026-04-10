@@ -52,10 +52,13 @@ class HandleInertiaRequests extends Middleware
             ],
             'adminNotifications' => $request->user()?->role === 'admin' ? [
             'newOrders'    => \App\Models\Order::where('status', 'new')->count(),
-            'newMessages'  => \App\Models\OrderMessage::where('sender_role', 'user')
-                ->whereHas('order', fn($q) => $q->where('status', '!=', 'cancelled'))
-                ->where('created_at', '>=', now()->subHours(24))
-                ->count(),
+            'newMessages'  => \App\Models\Order::where('has_unseen_activity', true)
+                ->orWhereIn('id', function ($query) {
+                    $query->select('order_id')
+                        ->from('order_messages')
+                        ->where('sender_role', 'user')
+                        ->where('is_read', false);
+                })->count(),
             ] : null,
         ];
     }

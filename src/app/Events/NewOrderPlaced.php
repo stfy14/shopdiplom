@@ -13,9 +13,9 @@ class NewOrderPlaced implements ShouldBroadcastNow
 
     public function __construct(public Order $order) {}
 
-    public function broadcastOn(): PrivateChannel // ИЗМЕНЕНО
+    public function broadcastOn(): PrivateChannel
     {
-        return new PrivateChannel('admin-notifications'); // ИЗМЕНЕНО
+        return new PrivateChannel('admin-notifications');
     }
 
     public function broadcastAs(): string
@@ -25,7 +25,8 @@ class NewOrderPlaced implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-        return [
+        return[
+            'order' => $this->order->toArray(), // ЭТОЙ СТРОКИ НЕ БЫЛО!
             'newOrdersCount'   => Order::where('status', 'new')->count(),
             'newMessagesCount' => Order::where('has_unseen_activity', true)->count(),
         ];

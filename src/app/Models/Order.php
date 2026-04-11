@@ -6,7 +6,7 @@ use Illuminate\Support\Str;
 
 class Order extends Model
 {
-    // ДОБАВЛЕНЫ 3 НОВЫХ ФЛАГА В КОНЕЦ
+    // ДОБАВЛЕНЫ 3 ПОСЛЕДНИХ ПОЛЯ
     protected $fillable =[
         'uuid', 'user_id', 'phone', 'total_price', 'status',
         'city', 'street', 'house', 'comment',

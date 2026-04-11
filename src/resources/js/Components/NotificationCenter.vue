@@ -39,9 +39,9 @@ function iconPath(n) {
 </script>
 
 <template>
-    <!-- Изменили позиционирование: mt-5 для спуска ниже границы нава. right-[-8px] sm:right-0 чтобы не вылезало за границы, ширина подстраивается под экран -->
+    <!-- Смещено ниже через mt-5 и прикреплено к правому краю, но растет влево -->
     <div class="absolute top-full right-[-8px] sm:right-0 mt-5 w-[calc(100vw-32px)] sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 flex flex-col transform origin-top-right">
-        <!-- Шапка -->
+        
         <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 flex-shrink-0">
             <span class="font-black text-gray-900 text-sm tracking-tight">Уведомления</span>
             <button
@@ -64,7 +64,7 @@ function iconPath(n) {
                 <p class="text-xs text-gray-400 mt-1">Новые уведомления появятся здесь</p>
             </div>
 
-            <!-- Список со скроллингом -->
+            <!-- TransitionGroup для анимации -->
             <TransitionGroup name="notif" tag="div" class="relative overflow-hidden flex flex-col">
                 <div
                     v-for="n in notifications"

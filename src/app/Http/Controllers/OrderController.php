@@ -5,7 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderMessage;
 use App\Events\NewOrderPlaced;
+use App\Events\NewOrderMessage;
+use App\Events\OrderUpdated;
+use App\Notifications\AppNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -14,18 +18,10 @@ class OrderController extends Controller
     public function index()
     {
         $items = Cart::with('product')->where('user_id', auth()->id())->get();
-        if ($items->isEmpty()) {
-            return redirect('/');
-        }
+        if ($items->isEmpty()) return redirect()->route('cart.index');
 
-        $total = $items->sum(function ($item) {
-            return $item->product->price_with_discount * $item->quantity;
-        });
-
-        return Inertia::render('Shop/Checkout', [
-            'items' => $items,
-            'total' => $total,
-        ]);
+        $total = $items->sum(fn($i) => ($i->product->price_with_discount ?? 0) * $i->quantity);
+        return Inertia::render('Shop/Checkout',['items' => $items, 'total' => $total]);
     }
 
     public function store(Request $request)
@@ -35,23 +31,21 @@ class OrderController extends Controller
             'street'  => 'required|string|max:255',
             'house'   => 'required|string|max:50',
             'comment' => 'nullable|string|max:1000',
-            'phone'   => ['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
+            'phone'   =>['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
         ]);
 
         $items = Cart::with('product')->where('user_id', auth()->id())->get();
         if ($items->isEmpty()) return back();
 
-        $total = $items->sum(function ($item) {
-            return $item->product->price_with_discount * $item->quantity;
-        });
+        $total = $items->sum(fn($i) => ($i->product->price_with_discount ?? 0) * $i->quantity);
 
         $order = Order::create([
             'user_id'     => auth()->id(),
+            'phone'       => $request->phone,
             'city'        => $request->city,
             'street'      => $request->street,
             'house'       => $request->house,
             'comment'     => $request->comment,
-            'phone'       => $request->phone,
             'total_price' => $total,
             'status'      => 'new',
         ]);
@@ -61,45 +55,46 @@ class OrderController extends Controller
                 'order_id'          => $order->id,
                 'product_id'        => $item->product_id,
                 'quantity'          => $item->quantity,
-                'price_at_purchase' => $item->product->price_with_discount,
+                'price_at_purchase' => $item->product->price_with_discount ?? 0,
             ]);
             $item->product->decrement('quantity', $item->quantity);
         }
 
         Cart::where('user_id', auth()->id())->delete();
 
-        broadcast(new NewOrderPlaced($order));
+        // СОЗДАЕМ УВЕДОМЛЕНИЕ ДЛЯ АДМИНОВ
+        $fmt = number_format($order->total_price, 0, '', ' ');
+        \App\Models\User::where('role', 'admin')->get()->each(function($admin) use($order, $fmt) {
+            $admin->notify(new AppNotification("Новый заказ #{$order->id} на {$fmt} ₽", 'success', "/admin/orders/{$order->id}", 'order'));
+        });
 
-        return redirect()->route('profile');
+        broadcast(new NewOrderPlaced($order));
+        return redirect()->route('order.show', $order->uuid);
     }
 
     public function show($uuid)
     {
         $order = Order::with(['items.product', 'messages'])->where('uuid', $uuid)->firstOrFail();
         if ($order->user_id !== auth()->id()) abort(403);
-
-        // Clear user-facing notification flags when user opens the order
-        $updates = [];
-        if ($order->user_has_unseen_status_change) $updates['user_has_unseen_status_change'] = false;
-        if ($order->user_has_unseen_contact_update) $updates['user_has_unseen_contact_update'] = false;
-        if (!empty($updates)) $order->update($updates);
-
+        
         return Inertia::render('Shop/Order', ['order' => $order]);
     }
 
     public function cancel(Order $order)
     {
-        if ($order->user_id !== auth()->id()) abort(403);
-        if ($order->status !== 'new') return back();
-
+        if ($order->user_id !== auth()->id() || !in_array($order->status, ['new', 'processing'])) abort(403);
+        
         $order->update(['status' => 'cancelled_by_user']);
-
         foreach ($order->items as $item) {
             $item->product->increment('quantity', $item->quantity);
         }
 
-        broadcast(new \App\Events\OrderUpdated($order, 'cancelled'));
+        // УВЕДОМЛЕНИЕ АДМИНУ ОБ ОТМЕНЕ
+        \App\Models\User::where('role', 'admin')->get()->each(function($admin) use($order) {
+            $admin->notify(new AppNotification("Заказ #{$order->id} отменён клиентом", 'error', "/admin/orders/{$order->id}", 'cancel'));
+        });
 
+        broadcast(new OrderUpdated($order, 'cancelled'));
         return back();
     }
 
@@ -114,18 +109,18 @@ class OrderController extends Controller
         if ($order->user_id !== auth()->id()) abort(403);
         $request->validate(['message' => 'required|string']);
 
-        $message = $order->messages()->create([
+        $message = OrderMessage::create([
+            'order_id'    => $order->id,
             'sender_role' => 'user',
             'message'     => $request->message,
         ]);
 
-        // NOTE: has_unseen_activity is NOT set here — messages are already tracked
-        // via unread_messages_count (is_read flag). has_unseen_activity is reserved
-        // exclusively for contact updates so the admin edit icon stays unambiguous.
+        // УВЕДОМЛЕНИЕ АДМИНУ О НОВОМ СООБЩЕНИИ
+        \App\Models\User::where('role', 'admin')->get()->each(function($admin) use($order) {
+            $admin->notify(new AppNotification("Новое сообщение от клиента в заказе #{$order->id}", 'success', "/admin/orders/{$order->id}", 'message'));
+        });
 
-        broadcast(new \App\Events\NewOrderMessage($message));
-        broadcast(new \App\Events\OrderUpdated($order, 'new_message'));
-
+        broadcast(new NewOrderMessage($message));
         return response()->json($message);
     }
 
@@ -137,23 +132,43 @@ class OrderController extends Controller
             'street'  => 'required|string|max:255',
             'house'   => 'required|string|max:50',
             'comment' => 'nullable|string|max:1000',
-            'phone'   => ['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
+            'phone'   =>['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
         ]);
 
         $order->update(array_merge(
             $request->only(['city', 'street', 'house', 'comment', 'phone']),
-            ['has_unseen_activity' => true] // exclusively means "user updated contacts"
+            ['has_unseen_activity' => true]
         ));
 
-        broadcast(new \App\Events\OrderUpdated($order, 'contacts_updated'));
+        // УВЕДОМЛЕНИЕ АДМИНУ
+        \App\Models\User::where('role', 'admin')->get()->each(function($admin) use($order) {
+            $admin->notify(new AppNotification("Клиент обновил контакты в заказе #{$order->id}", 'success', "/admin/orders/{$order->id}", 'edit'));
+        });
 
+        broadcast(new OrderUpdated($order, 'contacts_updated'));
         return response()->json(['success' => true]);
     }
 
     public function readMessages(Order $order)
     {
         if ($order->user_id !== auth()->id()) abort(403);
-        $order->messages()->where('sender_role', 'admin')->where('is_read', false)->update(['is_read' => true]);
+        $needsBroadcast = false;
+
+        if ($order->user_has_unseen_status_change || $order->user_has_unseen_contact_update) {
+            $order->update([
+                'user_has_unseen_status_change' => false,
+                'user_has_unseen_contact_update' => false
+            ]);
+            $needsBroadcast = true;
+        }
+
+        $unread = $order->messages()->where('sender_role', 'admin')->where('is_read', false);
+        if ($unread->exists()) {
+            $unread->update(['is_read' => true]);
+            $needsBroadcast = true;
+        }
+
+        if ($needsBroadcast) broadcast(new OrderUpdated($order, 'read'));
         return response()->json(['success' => true]);
     }
 }

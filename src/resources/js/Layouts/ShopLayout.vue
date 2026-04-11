@@ -4,29 +4,25 @@ import { computed, ref, watch, provide, onMounted, onUnmounted } from 'vue'
 import CartPopup from '@/Components/CartPopup.vue'
 import Toast from '@/Components/Toast.vue'
 import NotificationCenter from '@/Components/NotificationCenter.vue'
+import axios from 'axios'
 
 const page = usePage()
 const toast = ref(null)
-const notifications = ref([])
+
+// Локальное хранилище синхронизируется с сервером
+const localNotifications = ref([])
 const bellOpen = ref(false)
-const bellWrapper = ref(null) // Ссылка на контейнер колокольчика
+const bellWrapper = ref(null) // Реф для отслеживания кликов снаружи
 
-const unreadCount = computed(() => notifications.value.filter(n => !n.read).length)
+// Считаем непрочитанные 
+const unreadCount = computed(() => localNotifications.value.filter(n => !n.read).length)
 
-let _notifId = 0
+// Обновляем список только если прилетели новые данные от Inertia
+watch(() => page.props.notifications, (newVal) => {
+    localNotifications.value = newVal ? [...newVal] :[]
+}, { immediate: true, deep: true })
 
-// Инициализация LocalStorage
 onMounted(() => {
-    const saved = localStorage.getItem('shop_notifications')
-    if (saved) {
-        try {
-            notifications.value = JSON.parse(saved)
-            _notifId = Math.max(...notifications.value.map(n => n.id), 0)
-        } catch (e) {
-            localStorage.removeItem('shop_notifications')
-        }
-    }
-    // Обработчик клика вне колокольчика
     document.addEventListener('click', handleGlobalClick)
 })
 
@@ -34,53 +30,49 @@ onUnmounted(() => {
     document.removeEventListener('click', handleGlobalClick)
 })
 
-// Синхронизация с LocalStorage при любых изменениях
-watch(notifications, (newVal) => {
-    localStorage.setItem('shop_notifications', JSON.stringify(newVal))
-}, { deep: true })
-
+// Закрываем панель по клику в любое место
 function handleGlobalClick(e) {
     if (bellOpen.value && bellWrapper.value && !bellWrapper.value.contains(e.target)) {
         bellOpen.value = false
     }
 }
 
-function notify(message, type = 'success', opts = {}) {
-    notifications.value.unshift({
-        id: ++_notifId,
-        message,
-        type,
-        href: opts.href ?? null,
-        icon: opts.icon ?? null,
-        read: false,
-        createdAt: new Date(),
-    })
-    if (notifications.value.length > 50) notifications.value.length = 50
-    toast.value?.add(message, type, opts)
-}
-
 function openBell() {
     bellOpen.value = true
-    notifications.value.forEach(n => { n.read = true })
+    if (unreadCount.value > 0) {
+        // Оптимистично помечаем прочитанным и шлем запрос на сервер
+        localNotifications.value.forEach(n => n.read = true)
+        axios.post('/notifications/mark-read').then(() => {
+            router.reload({ only: ['notifications', 'adminNotifications'] })
+        })
+    }
 }
 
 function removeNotification(id) {
-    notifications.value = notifications.value.filter(n => n.id !== id)
+    localNotifications.value = localNotifications.value.filter(n => n.id !== id)
+    axios.delete(`/notifications/${id}`).then(() => {
+        router.reload({ only:['notifications', 'adminNotifications'] })
+    })
 }
 
 function clearAllNotifications() {
     // Удаляем элементы "Ступенькой" с задержкой 50мс
-    const items = [...notifications.value]
+    const items = [...localNotifications.value]
     items.forEach((notif, index) => {
         setTimeout(() => {
-            removeNotification(notif.id)
+            localNotifications.value = localNotifications.value.filter(n => n.id !== notif.id)
         }, index * 50)
+    })
+    
+    axios.delete('/notifications/all').then(() => {
+        router.reload({ only:['notifications', 'adminNotifications'] })
     })
 }
 
+// Теперь Toast вызывается напрямую без пуша в список, так как список обновляется сервером
 provide('toast', {
-    success: (msg, opts = {}) => notify(msg, 'success', opts),
-    error:   (msg, opts = {}) => notify(msg, 'error', opts),
+    success: (msg, opts = {}) => toast.value?.add(msg, 'success', opts),
+    error:   (msg, opts = {}) => toast.value?.add(msg, 'error', opts),
 })
 
 watch(() => page.props.flash?.cart_added, (val) => {
@@ -96,14 +88,11 @@ const currentPage = computed(() => page.component)
 function fmt(p) { return new Intl.NumberFormat('ru-RU').format(p) }
 
 const statusLabels = {
-    new:               'Новый',
-    processing:        'В обработке',
-    shipped:           'Отправлен',
-    cancelled:         'Отменён',
-    cancelled_by_user: 'Отменён клиентом',
+    new: 'Новый', processing: 'В обработке', shipped: 'Отправлен', 
+    cancelled: 'Отменён', cancelled_by_user: 'Отменён клиентом',
 }
 
-// ---------- ПОДПИСКИ ----------
+// Подписки: Показываем тост и перезагружаем (Inertia сама подтянет новое уведомление в список)
 watch(() => user.value, (newUser, oldUser) => {
     if (oldUser) {
         window.Echo.leave(`user.${oldUser.id}`)
@@ -112,88 +101,53 @@ watch(() => user.value, (newUser, oldUser) => {
 
     if (!newUser) return
 
-    // ===== АДМИНИСТРАТОР =====
     if (newUser.role === 'admin') {
         window.Echo.private('admin-notifications')
             .listen('.NewOrderPlaced', (event) => {
-                if (event.order) {
-                    notify(`Новый заказ #${event.order.id} на ${fmt(event.order.total_price)} ₽`, 'success', { icon: 'order', href: `/admin/orders/${event.order.id}` })
-                }
-                const extra = currentPage.value === 'Admin/Orders' ? ['orders'] :[]
-                router.reload({ only: ['adminNotifications', ...extra], preserveScroll: true, preserveState: true })
+                if (event.order) toast.value?.add(`Новый заказ #${event.order.id} на ${fmt(event.order.total_price)} ₽`, 'success', { icon: 'order', href: `/admin/orders/${event.order.id}` })
+                router.reload({ only:['notifications', 'adminNotifications', 'orders'], preserveScroll: true, preserveState: true })
             })
             .listen('.OrderUpdated', (event) => {
                 const id = event.order?.id
                 const pg = currentPage.value
                 const onThisOrder = pg === 'Admin/OrderView' && window.location.pathname.includes(`/admin/orders/${id}`)
 
-                switch (event.type) {
-                    case 'new_message':
-                        if (!onThisOrder)
-                            notify(`Новое сообщение в заказе #${id}`, 'success', { icon: 'message', href: `/admin/orders/${id}` })
-                        break
-                    case 'contacts_updated':
-                        if (!onThisOrder)
-                            notify(`Клиент обновил контакты заказа #${id}`, 'success', { icon: 'edit', href: `/admin/orders/${id}` })
-                        break
-                    case 'cancelled':
-                        notify(`Заказ #${id} отменён клиентом`, 'error', { icon: 'cancel', href: `/admin/orders/${id}` })
-                        break
-                }
+                if (event.type === 'new_message' && !onThisOrder) toast.value?.add(`Новое сообщение в заказе #${id}`, 'success', { icon: 'message', href: `/admin/orders/${id}` })
+                if (event.type === 'contacts_updated' && !onThisOrder) toast.value?.add(`Клиент обновил контакты заказа #${id}`, 'success', { icon: 'edit', href: `/admin/orders/${id}` })
+                if (event.type === 'cancelled') toast.value?.add(`Заказ #${id} отменён клиентом`, 'error', { icon: 'cancel', href: `/admin/orders/${id}` })
 
-                const extra =[]
-                if (pg === 'Admin/Orders')    extra.push('orders')
-                if (pg === 'Admin/OrderView') extra.push('order')
-                router.reload({ only: ['adminNotifications', ...extra], preserveScroll: true, preserveState: true })
+                router.reload({ only: ['notifications', 'adminNotifications', 'orders', 'order'], preserveScroll: true, preserveState: true })
             })
             .listen('.ProductUpdated', () => {
-                if (currentPage.value === 'Admin/Products') {
-                    router.reload({ only: ['products'], preserveScroll: true, preserveState: true })
-                }
+                if (currentPage.value === 'Admin/Products') router.reload({ only: ['products'], preserveScroll: true, preserveState: true })
             })
     }
 
-    // ===== ПОЛЬЗОВАТЕЛЬ =====
     if (newUser.role === 'user') {
         window.Echo.private(`user.${newUser.id}`)
             .listen('.OrderUpdated', (event) => {
                 const order = event.order
                 if (!order) return
-
-                const pg          = currentPage.value
+                const pg = currentPage.value
                 const onThisOrder = pg === 'Shop/Order' && window.location.pathname.includes(`/orders/${order.uuid}`)
 
-                switch (event.type) {
-                    case 'status_change': {
-                        const label = statusLabels[order.status] ?? order.status
-                        if (!onThisOrder)
-                            notify(`Заказ #${order.id}: статус изменён на «${label}»`, 'success', { icon: 'status', href: `/orders/${order.uuid}` })
-                        break
-                    }
-                    case 'contacts_updated_by_admin':
-                        if (!onThisOrder)
-                            notify(`Менеджер обновил контакты заказа #${order.id}`, 'success', { icon: 'edit', href: `/orders/${order.uuid}` })
-                        break
-                }
+                if (event.type === 'status_change' && !onThisOrder) toast.value?.add(`Заказ #${order.id}: статус изменён на «${statusLabels[order.status] ?? order.status}»`, 'success', { icon: 'status', href: `/orders/${order.uuid}` })
+                if (event.type === 'contacts_updated_by_admin' && !onThisOrder) toast.value?.add(`Менеджер обновил контакты заказа #${order.id}`, 'success', { icon: 'edit', href: `/orders/${order.uuid}` })
 
-                if (pg === 'Shop/Profile') {
-                    router.reload({ only: ['orders'], preserveScroll: true, preserveState: true })
-                }
+                router.reload({ only: ['notifications', 'orders'], preserveScroll: true, preserveState: true })
             })
             .listen('.NewOrderMessage', (event) => {
                 if (event.sender_role !== 'admin') return
                 const onThisOrder = currentPage.value === 'Shop/Order' && window.location.pathname.includes(`/orders/${event.order_uuid}`)
-                if (!onThisOrder) {
-                    notify(`Новый ответ по заказу #${event.order_number}`, 'success', { icon: 'message', href: `/orders/${event.order_uuid}` })
-                }
+                if (!onThisOrder) toast.value?.add(`Новый ответ по заказу #${event.order_number}`, 'success', { icon: 'message', href: `/orders/${event.order_uuid}` })
+                
+                router.reload({ only: ['notifications'], preserveScroll: true, preserveState: true })
             })
             .listen('.CartPriceChanged', (event) => {
-                const was  = fmt(event.old_price)
-                const now  = fmt(event.new_price)
                 const priceDown = event.new_price < event.old_price
-                const type = priceDown ? 'success' : 'error'
-                notify(`«${event.product_title}»: ${was} → ${now} ₽`, type, { icon: priceDown ? 'price_down' : 'price_up', href: '/cart' })
-                router.reload({ only: ['cartItems', 'cartCount'], preserveScroll: true, preserveState: true })
+                toast.value?.add(`«${event.product_title}»: ${fmt(event.old_price)} → ${fmt(event.new_price)} ₽`, priceDown ? 'success' : 'error', { icon: priceDown ? 'price_down' : 'price_up', href: '/cart' })
+                
+                router.reload({ only:['notifications', 'cartItems', 'cartCount'], preserveScroll: true, preserveState: true })
             })
     }
 }, { immediate: true })
@@ -223,9 +177,7 @@ watch(() => user.value, (newUser, oldUser) => {
                             <span v-if="cartCount > 0" class="absolute -top-1 -right-1 bg-red-500 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm border-2 border-white">{{ cartCount }}</span>
                         </button>
 
-                        <!-- ДОБАВЛЕН REF bellWrapper СЮДА -->
                         <div v-if="user" class="relative" ref="bellWrapper">
-                            <!-- ДОБАВЛЕН .stop ЧТОБЫ КЛИК НЕ ДОШЕЛ ДО document СРАЗУ -->
                             <button
                                 @click.stop="bellOpen ? bellOpen = false : openBell()"
                                 class="relative flex items-center justify-center w-11 h-11 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
@@ -244,7 +196,7 @@ watch(() => user.value, (newUser, oldUser) => {
                             <Transition name="bell-drop">
                                 <NotificationCenter
                                     v-if="bellOpen"
-                                    :notifications="notifications"
+                                    :notifications="localNotifications"
                                     @remove="removeNotification"
                                     @remove-all="clearAllNotifications"
                                 />

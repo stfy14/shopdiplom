@@ -13,6 +13,11 @@ Route::get('/product/{product}', [ProductController::class, 'show'])->name('prod
 
 // Корзина
 Route::middleware('auth')->group(function () {
+    // Уведомления
+    Route::post('/notifications/mark-read',[\App\Http\Controllers\NotificationController::class, 'markAllRead'])->name('notifications.markRead');
+    Route::delete('/notifications/all',[\App\Http\Controllers\NotificationController::class, 'destroyAll'])->name('notifications.destroyAll');
+    Route::delete('/notifications/{id}',[\App\Http\Controllers\NotificationController::class, 'destroy'])->name('notifications.destroy');
+
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart/{product}', [CartController::class, 'add'])->name('cart.add');
     Route::patch('/cart/{product}', [CartController::class, 'update'])->name('cart.update');

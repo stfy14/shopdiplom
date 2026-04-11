@@ -142,42 +142,50 @@ class ProductController extends Controller
             $oldFinal = $oldDiscount > 0 ? round($oldPrice * (1 - $oldDiscount / 100)) : $oldPrice;
             $newFinal = $newDiscount > 0 ? round($newPrice * (1 - $newDiscount / 100)) : $newPrice;
 
-            if ($oldFinal !== $newFinal) {
-                $reason = '';
-                // Форматируем цены для красивого вывода (например, 60000 -> 60 000)
-                $fmtOld = number_format($oldPrice, 0, '', ' ');
-                $fmtNew = number_format($newPrice, 0, '', ' ');
+        if ($oldFinal !== $newFinal) {
+            $reason = '';
+            $fmtOld = number_format($oldPrice, 0, '', ' ');
+            $fmtNew = number_format($newPrice, 0, '', ' ');
 
-                if ($oldPrice != $newPrice && $oldDiscount != $newDiscount) {
-                    $reason = "Изменилась базовая цена (с $fmtOld на $fmtNew) и скидка (с {$oldDiscount}% на {$newDiscount}%)";
-                } elseif ($oldPrice != $newPrice) {
-                    $reason = "Изменилась базовая цена с $fmtOld на $fmtNew";
-                } elseif ($oldDiscount != $newDiscount) {
-                    $reason = "Изменилась скидка с {$oldDiscount}% на {$newDiscount}%";
-                }
+            if ($oldPrice != $newPrice && $oldDiscount != $newDiscount) {
+                $reason = "Изменилась базовая цена (с $fmtOld на $fmtNew) и скидка (с {$oldDiscount}% на {$newDiscount}%)";
+            } elseif ($oldPrice != $newPrice) {
+                $reason = "Изменилась базовая цена с $fmtOld на $fmtNew";
+            } elseif ($oldDiscount != $newDiscount) {
+                $reason = "Изменилась скидка с {$oldDiscount}% на {$newDiscount}%";
+            }
 
-                // Помечаем в корзинах, что цена изменилась
-                Cart::where('product_id', $product->id)->update([
-                    'old_price' => $oldFinal,
-                    'price_change_reason' => $reason
-                ]);
+            Cart::where('product_id', $product->id)->update([
+                'old_price' => $oldFinal,
+                'price_change_reason' => $reason
+            ]);
 
-                $cartItems = Cart::where('product_id', $product->id)->get();
-                foreach ($cartItems as $cartItem) {
-                    broadcast(new CartPriceChanged(
-                        $cartItem->user_id,
-                        $product,
-                        $oldPrice,
-                        $newPrice,
-                        $oldDiscount,
-                        $newDiscount,
+            $cartItems = Cart::where('product_id', $product->id)->get();
+            $priceDown = $newFinal < $oldFinal;
+
+            foreach ($cartItems as $cartItem) {
+                $user = \App\Models\User::find($cartItem->user_id);
+                if ($user) {
+                    $user->notify(new \App\Notifications\AppNotification(
+                        "«{$product->title}»: $fmtOld → $fmtNew ₽",
+                        $priceDown ? 'success' : 'error',
+                        '/cart',
+                        $priceDown ? 'price_down' : 'price_up'
                     ));
                 }
+
+                broadcast(new CartPriceChanged(
+                    $cartItem->user_id,
+                    $product,
+                    $oldPrice,
+                    $newPrice,
+                    $oldDiscount,
+                    $newDiscount,
+                ));
             }
         }
 
         broadcast(new ProductUpdated());
-
         return redirect()->route('admin.products');
     }
 

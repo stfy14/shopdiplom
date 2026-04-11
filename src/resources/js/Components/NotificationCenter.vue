@@ -39,22 +39,21 @@ function iconPath(n) {
 </script>
 
 <template>
-    <div class="absolute top-full right-0 mt-2.5 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 flex flex-col">
+    <!-- Изменили позиционирование: mt-5 для спуска ниже границы нава. right-[-8px] sm:right-0 чтобы не вылезало за границы, ширина подстраивается под экран -->
+    <div class="absolute top-full right-[-8px] sm:right-0 mt-5 w-[calc(100vw-32px)] sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 flex flex-col transform origin-top-right">
         <!-- Шапка -->
         <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 flex-shrink-0">
             <span class="font-black text-gray-900 text-sm tracking-tight">Уведомления</span>
             <button
                 v-if="notifications.length > 0"
-                @click="emit('remove-all')"
+                @click.stop="emit('remove-all')"
                 class="text-xs font-bold text-gray-400 hover:text-red-500 transition px-2 py-1 rounded-lg hover:bg-red-50"
             >
                 Очистить всё
             </button>
         </div>
 
-        <!-- Список со скроллингом -->
         <div class="overflow-y-auto" style="max-height: 440px;">
-            <!-- Пусто -->
             <div v-if="notifications.length === 0" class="flex flex-col items-center justify-center py-16 text-gray-400">
                 <div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
                     <svg class="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -65,24 +64,22 @@ function iconPath(n) {
                 <p class="text-xs text-gray-400 mt-1">Новые уведомления появятся здесь</p>
             </div>
 
-            <!-- Элементы -->
-            <TransitionGroup name="notif" tag="div">
+            <!-- Список со скроллингом -->
+            <TransitionGroup name="notif" tag="div" class="relative overflow-hidden flex flex-col">
                 <div
                     v-for="n in notifications"
                     :key="n.id"
                     :class="[
-                        'relative flex items-start gap-3 px-4 py-3.5 border-b border-gray-50 last:border-0 group transition-colors',
+                        'relative flex items-start gap-3 px-4 py-3.5 border-b border-gray-50 last:border-0 group transition-colors bg-white',
                         n.href ? 'cursor-pointer hover:bg-gray-50/80' : '',
                         !n.read ? 'bg-blue-50/30' : ''
                     ]"
                     @click="navigate(n)"
                 >
-                    <!-- Индикатор непрочитанного -->
                     <div class="flex-shrink-0 pt-1.5 w-2">
                         <div v-if="!n.read" class="w-2 h-2 rounded-full bg-blue-500 ring-2 ring-blue-100" />
                     </div>
 
-                    <!-- Иконка -->
                     <div :class="[
                         'flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center',
                         n.type === 'error' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'
@@ -92,7 +89,6 @@ function iconPath(n) {
                         </svg>
                     </div>
 
-                    <!-- Текст -->
                     <div class="flex-grow min-w-0">
                         <p :class="['text-sm leading-snug', !n.read ? 'font-bold text-gray-900' : 'font-semibold text-gray-700']">
                             {{ n.message }}
@@ -106,7 +102,6 @@ function iconPath(n) {
                         </p>
                     </div>
 
-                    <!-- Кнопка удаления (появляется при hover) -->
                     <button
                         @click.stop="emit('remove', n.id)"
                         class="flex-shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 transition opacity-0 group-hover:opacity-100 mt-0.5"
@@ -124,8 +119,9 @@ function iconPath(n) {
 
 <style scoped>
 .notif-enter-active { transition: all 0.25s cubic-bezier(0.34, 1.2, 0.64, 1); }
-.notif-leave-active { transition: all 0.18s ease-in; position: absolute; width: 100%; }
-.notif-enter-from   { opacity: 0; transform: translateY(-6px); }
-.notif-leave-to     { opacity: 0; transform: translateX(16px); }
-.notif-move         { transition: transform 0.25s ease; }
+/* Анимация смахивания ВЛЕВО: меняем translateX */
+.notif-leave-active { transition: all 0.25s ease-in; position: absolute; width: 100%; z-index: 0; }
+.notif-enter-from   { opacity: 0; transform: translateY(-10px); }
+.notif-leave-to     { opacity: 0; transform: translateX(-100%); }
+.notif-move         { transition: transform 0.25s ease; z-index: 1; }
 </style>

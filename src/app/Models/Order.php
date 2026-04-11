@@ -6,10 +6,22 @@ use Illuminate\Support\Str;
 
 class Order extends Model
 {
-    protected $fillable = [
+    // ДОБАВЛЕНЫ 3 НОВЫХ ФЛАГА В КОНЕЦ
+    protected $fillable =[
         'uuid', 'user_id', 'phone', 'total_price', 'status',
-        'city', 'street', 'house', 'comment'
+        'city', 'street', 'house', 'comment',
+        'has_unseen_activity', 'user_has_unseen_status_change', 'user_has_unseen_contact_update'
     ];
+
+    // Явное приведение к булевому типу, чтобы Vue и Inertia понимали их как true/false, а не 1/0
+    protected function casts(): array
+    {
+        return[
+            'has_unseen_activity' => 'boolean',
+            'user_has_unseen_status_change' => 'boolean',
+            'user_has_unseen_contact_update' => 'boolean',
+        ];
+    }
 
     protected static function boot()
     {

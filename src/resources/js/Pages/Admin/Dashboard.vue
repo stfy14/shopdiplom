@@ -43,10 +43,11 @@ const statusMap = {
 
         <h2 class="text-xl font-black mb-4 text-gray-900">Последние заказы</h2>
         
+        <!-- Изменили ширину колонок: Клиент (4), Сумма (2 - уменьшили), Статус (4) -->
         <div class="grid grid-cols-12 gap-4 px-5 text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
             <div class="col-span-2">Заказ</div>
-            <div class="col-span-3">Клиент</div>
-            <div class="col-span-3">Сумма</div>
+            <div class="col-span-4">Клиент</div>
+            <div class="col-span-2">Сумма</div>
             <div class="col-span-4">Статус</div>
         </div>
 
@@ -54,28 +55,29 @@ const statusMap = {
             <div v-if="recentOrders.length === 0" class="text-center py-16 text-gray-400 bg-white rounded-3xl border border-gray-100 shadow-sm">
                 Пока нет ни одного заказа
             </div>
+            
+            <!-- Применили фикс анимации (transition duration-300 ease-out hover:-translate-y-1 will-change-transform antialiased) -->
             <Link
                 v-for="order in recentOrders"
                 :key="order.id"
                 :href="`/admin/orders/${order.id}`"
-                class="relative grid grid-cols-12 gap-4 items-center bg-white rounded-2xl shadow-sm p-4 transition-all hover:shadow-md hover:-translate-y-px border border-gray-100 group"
+                class="relative grid grid-cols-12 gap-4 items-center bg-white rounded-2xl shadow-sm p-4 transition duration-300 ease-out hover:shadow-md hover:-translate-y-1 will-change-transform antialiased border border-gray-100 group"
             >
                 <div class="col-span-2">
                     <div class="font-black text-gray-900">#{{ order.id }}</div>
                     <div class="text-xs text-gray-400 mt-0.5">{{ formatDate(order.created_at) }}</div>
                 </div>
-                <div class="col-span-3 font-bold text-gray-900 truncate">{{ order.user?.name }}</div>
-                <div class="col-span-3 font-black text-gray-900">{{ formatPrice(order.total_price) }} ₽</div>
+                <div class="col-span-4 font-bold text-gray-900 truncate">{{ order.user?.name }}</div>
+                
+                <!-- whitespace-nowrap защитит цену от переноса на новую строку, если цифра будет очень большой -->
+                <div class="col-span-2 font-black text-gray-900 whitespace-nowrap">{{ formatPrice(order.total_price) }} ₽</div>
+                
                 <div class="col-span-4">
                      <span :class="['px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap', statusMap[order.status]?.color]">
                         {{ statusMap[order.status]?.label }}
                     </span>
                 </div>
-                <div class="absolute top-1/2 -translate-y-1/2 right-5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span class="px-4 py-2 border rounded-xl text-xs font-bold text-gray-600 transition bg-white/50 backdrop-blur-sm shadow-sm">
-                        Открыть
-                    </span>
-                </div>
+                <!-- КНОПКА "ОТКРЫТЬ" ПОЛНОСТЬЮ УДАЛЕНА -->
             </Link>
         </div>
     </div>

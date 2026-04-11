@@ -56,6 +56,7 @@ function formatDate(dt) {
                 </div>
 
                 <div class="flex flex-col gap-3">
+                    <!-- Применили все фиксы анимации и убрали кнопку -->
                     <Link
                         v-for="order in orders"
                         :key="order.id"
@@ -75,7 +76,7 @@ function formatDate(dt) {
                         </div>
 
                         <!-- Total -->
-                        <div class="col-span-3 font-black text-gray-900">{{ formatPrice(order.total_price) }} ₽</div>
+                        <div class="col-span-3 font-black text-gray-900 whitespace-nowrap">{{ formatPrice(order.total_price) }} ₽</div>
 
                         <!-- Status badge -->
                         <div class="col-span-3">
@@ -84,68 +85,23 @@ function formatDate(dt) {
                             </span>
                         </div>
 
-                        <!--
-                            Notification icons — same position & style as Admin/Orders.
-                            All icons are independent and show simultaneously.
-
-                            1. Blue  clock     — order is "new" (awaiting confirmation)
-                            2. Yellow chat     — unread message from manager
-                            3. Green  check    — admin changed order status (unseen by user)
-                            4. Purple edit pen — admin updated contact info (unseen by user)
-                        -->
+                        <!-- Иконки уведомлений остаются на месте -->
                         <div class="absolute -top-1.5 -right-1.5 flex items-center gap-1.5">
-
-                            <!-- 1. Ждём подтверждения -->
-                            <div
-                                v-if="order.status === 'new'"
-                                class="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md border-2 border-white"
-                                title="Ждём подтверждения заказа"
-                            >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
+                            <div v-if="order.status === 'new'" class="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md border-2 border-white" title="Ждём подтверждения заказа">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             </div>
-
-                            <!-- 2. Новое сообщение от менеджера -->
-                            <div
-                                v-if="order.unread_messages_count > 0"
-                                class="w-7 h-7 rounded-full bg-yellow-400 text-yellow-900 flex items-center justify-center shadow-md border-2 border-white"
-                                title="Новое сообщение от менеджера"
-                            >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                                </svg>
+                            <div v-if="order.unread_messages_count > 0" class="w-7 h-7 rounded-full bg-yellow-400 text-yellow-900 flex items-center justify-center shadow-md border-2 border-white" title="Новое сообщение от менеджера">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                             </div>
-
-                            <!-- 3. Статус изменён администратором -->
-                            <div
-                                v-if="order.user_has_unseen_status_change"
-                                class="w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center shadow-md border-2 border-white"
-                                title="Статус заказа изменён"
-                            >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
+                            <div v-if="order.user_has_unseen_status_change" class="w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center shadow-md border-2 border-white" title="Статус заказа изменён">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             </div>
-
-                            <!-- 4. Контакты обновлены администратором -->
-                            <div
-                                v-if="order.user_has_unseen_contact_update"
-                                class="w-7 h-7 rounded-full bg-purple-500 text-white flex items-center justify-center shadow-md border-2 border-white"
-                                title="Менеджер обновил контактные данные"
-                            >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-                                </svg>
+                            <div v-if="order.user_has_unseen_contact_update" class="w-7 h-7 rounded-full bg-purple-500 text-white flex items-center justify-center shadow-md border-2 border-white" title="Менеджер обновил контактные данные">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                             </div>
                         </div>
 
-                        <!-- Hover open button -->
-                        <div class="absolute top-1/2 -translate-y-1/2 right-5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span class="px-4 py-2 border rounded-xl text-xs font-bold text-gray-600 bg-white/50 backdrop-blur-sm shadow-sm">
-                                Открыть
-                            </span>
-                        </div>
+                        <!-- Блок с кнопкой "Открыть" полностью удалён -->
                     </Link>
                 </div>
             </div>

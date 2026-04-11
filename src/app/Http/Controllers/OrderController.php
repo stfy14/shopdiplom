@@ -7,7 +7,10 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderMessage;
 use App\Events\NewOrderMessage;
+use App\Events\NewOrderPlaced;
+use App\Events\OrderUpdated;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class OrderController extends Controller
@@ -30,7 +33,7 @@ class OrderController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'city'    => 'required|string|max:100',
             'street'  => 'required|string|max:255',
             'house'   => 'required|string|max:50',
@@ -38,39 +41,35 @@ class OrderController extends Controller
             'phone'   => ['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
         ]);
 
-        $items = Cart::with('product')
-            ->where('user_id', auth()->id())
-            ->get();
+        $items = Cart::with('product')->where('user_id', auth()->id())->get();
+        if ($items->isEmpty()) return redirect()->route('home');
+        
+        $order = null;
+        DB::transaction(function () use ($items, $data, &$order) {
+            $total = $items->sum(fn($i) => $i->product->price_with_discount * $i->quantity);
 
-        $total = $items->sum(fn($i) => $i->product->price * $i->quantity);
+            $order = Order::create(array_merge($data, [
+                'user_id'     => auth()->id(),
+                'total_price' => $total,
+                'status'      => 'new',
+            ]));
 
-        $order = Order::create([
-            'user_id'     => auth()->id(),
-            'city'        => $request->city,
-            'street'      => $request->street,
-            'house'       => $request->house,
-            'comment'     => $request->comment,
-            'phone'       => $request->phone,
-            'total_price' => $total,
-            'status'      => 'new',
-        ]);
-
-        foreach ($items as $item) {
-            OrderItem::create([
-                'order_id'          => $order->id,
-                'product_id'        => $item->product_id,
-                'quantity'          => $item->quantity,
-                'price_at_purchase' => $item->product->price,
-            ]);
-        }
-
-        Cart::where('user_id', auth()->id())->delete();
+            foreach ($items as $item) {
+                OrderItem::create([
+                    'order_id'          => $order->id,
+                    'product_id'        => $item->product_id,
+                    'quantity'          => $item->quantity,
+                    'price_at_purchase' => $item->product->price_with_discount,
+                ]);
+            }
+            Cart::where('user_id', auth()->id())->delete();
+        });
 
         broadcast(new NewOrderPlaced($order));
 
         return redirect()->route('order.show', $order->uuid);
     }
-
+    
     public function show(string $uuid)
     {
         $order = Order::with(['items.product', 'messages'])
@@ -91,23 +90,29 @@ class OrderController extends Controller
 
         $order->update([
             'status' => 'cancelled_by_user',
-            'has_unseen_activity' => true // Добавляем флаг
+            'has_unseen_activity' => true
         ]);
 
-        return back();
+        broadcast(new OrderUpdated($order));
+
+        return response()->json(['success' => true]);
     }
 
     public function getMessages(Order $order)
     {
-        $messages = $order->messages()->latest()->get();
-        return response()->json($messages);
+        if ($order->user_id !== auth()->id() && auth()->user()->role !== 'admin') {
+            abort(403);
+        }
+        return response()->json($order->messages()->oldest()->get());
     }
 
     public function sendMessage(Order $order, Request $request)
     {
+        if ($order->user_id !== auth()->id()) abort(403);
+
         $request->validate(['message' => 'required|string']);
 
-        OrderMessage::create([
+        $message = OrderMessage::create([
             'order_id'    => $order->id,
             'sender_role' => 'user',
             'message'     => $request->message,
@@ -116,8 +121,9 @@ class OrderController extends Controller
         $order->update(['has_unseen_activity' => true]);
 
         broadcast(new NewOrderMessage($message));
+        broadcast(new OrderUpdated($order));
 
-        return back();
+        return response()->json($message);
     }
 
     public function updateContacts(Order $order, Request $request)
@@ -126,7 +132,7 @@ class OrderController extends Controller
             abort(403);
         }
 
-        $request->validate([
+        $validated = $request->validate([
             'city'    => 'required|string|max:100',
             'street'  => 'required|string|max:255',
             'house'   => 'required|string|max:50',
@@ -134,13 +140,14 @@ class OrderController extends Controller
             'phone'   => ['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
         ]);
 
-        $order->update($request->only(['city', 'street', 'house', 'comment', 'phone']));
+        $order->update($validated);
 
-        // Взводим флаг, если юзер сам поменял данные
+        // ИСПРАВЛЕННАЯ ЛОГИКА: сначала флаг, потом событие
         if ($order->user_id === auth()->id()) {
             $order->update(['has_unseen_activity' => true]);
         }
+        broadcast(new OrderUpdated($order));
 
-        return back();
+        return response()->json(['success' => true]);
     }
 }

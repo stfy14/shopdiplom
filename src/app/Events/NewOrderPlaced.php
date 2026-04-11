@@ -3,19 +3,24 @@
 namespace App\Events;
 
 use App\Models\Order;
-use Illuminate\Broadcasting\Channel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 
-class NewOrderPlaced implements ShouldBroadcast
+class NewOrderPlaced implements ShouldBroadcastNow 
 {
     use Dispatchable;
 
     public function __construct(public Order $order) {}
 
-    public function broadcastOn(): Channel
+    public function broadcastOn(): PrivateChannel // ИЗМЕНЕНО
     {
-        return new Channel('admin-notifications');
+        return new PrivateChannel('admin-notifications'); // ИЗМЕНЕНО
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'NewOrderPlaced';
     }
 
     public function broadcastWith(): array

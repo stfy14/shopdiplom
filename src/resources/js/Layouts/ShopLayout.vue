@@ -1,13 +1,19 @@
 <script setup>
 import { Link, usePage, router } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
-import { watch } from 'vue'
+import { computed, ref, watch, provide, onMounted, onUnmounted } from 'vue'
 import CartPopup from '@/Components/CartPopup.vue'
 import Toast from '@/Components/Toast.vue'
 
 const page = usePage()
 const toast = ref(null)
 
+// Глобальный метод для вызова тостов из любой дочерней страницы
+provide('toast', {
+    success: (msg) => toast.value?.add(msg, 'success'),
+    error: (msg) => toast.value?.add(msg, 'error'),
+})
+
+// Старый watcher для уведомления о добавлении в корзину
 watch(() => page.props.flash?.cart_added, (val) => {
     if (val) toast.value?.add(`${val} добавлен в корзину`, 'success')
 })
@@ -15,15 +21,61 @@ watch(() => page.props.flash?.cart_added, (val) => {
 const user = computed(() => page.props.auth.user)
 const cartCount = computed(() => page.props.cartCount ?? 0)
 const cartItems = computed(() => page.props.cartItems ?? [])
-
 const cartOpen = ref(false)
 
-// Глобальный метод для тоста — доступен через provide
-import { provide } from 'vue'
-provide('toast', {
-    success: (msg) => toast.value?.add(msg, 'success'),
-    error: (msg) => toast.value?.add(msg, 'error'),
-})
+// --- ИСПРАВЛЕННЫЙ ГЛОБАЛЬНЫЙ СЛУШАТЕЛЬ WEBSOCKET ---
+onMounted(() => {
+    if (!user.value) return; // Если гость - ничего не делаем
+
+    // ЛОГИКА ДЛЯ АДМИНА
+    if (user.value.role === 'admin') {
+        window.Echo.private('admin-notifications')
+            .listen('.NewOrderPlaced', (event) => {
+                toast.value?.add(`Поступил новый заказ!`, 'success');
+                // Обновляем только счетчики в шапке, не всю страницу
+                router.reload({ only: ['adminNotifications'], preserveScroll: true, preserveState: true });
+            })
+            .listen('.ProductUpdated', () => {
+                // Это событие теперь просто перезагружает данные на нужной странице,
+                // тост здесь не нужен, чтобы не спамить.
+            })
+            .listen('.OrderUpdated', (event) => {
+                // Показываем тост, только если появилась новая активность от клиента
+                if (event.order.has_unseen_activity) {
+                     toast.value?.add(`Новая активность по заказу #${event.order.id}`, 'success');
+                }
+                // Также обновляем счетчики в шапке
+                router.reload({ only: ['adminNotifications'], preserveScroll: true, preserveState: true });
+            });
+    }
+
+    // ЛОГИКА ДЛЯ ОБЫЧНОГО КЛИЕНТА
+    if (user.value.role === 'user') {
+        window.Echo.private(`user.${user.value.id}`)
+            .listen('.OrderUpdated', (event) => {
+                const statusMap = {
+                    new: { label: 'Новый' }, processing: { label: 'В обработке' },
+                    shipped: { label: 'Отправлен' }, cancelled: { label: 'Отменён' },
+                    cancelled_by_user: { label: 'Отменён вами' },
+                };
+                const newStatus = event.order.status;
+
+                // Показываем тост о смене статуса, если мы НЕ находимся на странице этого заказа
+                if (!window.location.pathname.includes(`/orders/${event.order.uuid}`)) {
+                    toast.value?.add(`Статус заказа #${event.order.id} изменен на «${statusMap[newStatus]?.label || newStatus}»`, 'success');
+                }
+            });
+    }
+});
+
+onUnmounted(() => {
+    if (user.value) {
+        window.Echo.leave(`user.${user.value.id}`);
+        if (user.value.role === 'admin') {
+            window.Echo.leave('admin-notifications');
+        }
+    }
+});
 </script>
 
 <template>
@@ -50,7 +102,6 @@ provide('toast', {
                     </form>
 
                     <div class="flex items-center gap-3">
-                        <!-- Кнопка корзины -->
                         <button
                             @click="cartOpen = true"
                             class="relative flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 transition text-sm font-medium"
@@ -102,14 +153,12 @@ provide('toast', {
             </div>
         </footer>
 
-        <!-- Попап корзины -->
         <CartPopup
             :show="cartOpen"
             :items="cartItems"
             @close="cartOpen = false"
         />
 
-        <!-- Тосты -->
         <Toast ref="toast" />
     </div>
 </template>

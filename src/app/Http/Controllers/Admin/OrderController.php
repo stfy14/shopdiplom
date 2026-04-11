@@ -6,20 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderMessage;
 use App\Events\NewOrderMessage;
+use App\Events\OrderUpdated; // <-- Убедитесь, что это добавлено
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class OrderController extends Controller
 {
-    public function index(\Illuminate\Http\Request $request)
+    public function index(Request $request)
     {
-        $tab = $request->get('tab', 'active'); // Получаем текущую вкладку
+        $tab = $request->get('tab', 'active');
+        $query = Order::with('user')->withCount('unreadMessages')->latest();
 
-        $query = \App\Models\Order::with('user')
-            ->withCount('unreadMessages')
-            ->latest();
-
-        // Фильтруем в зависимости от вкладки
         if ($tab === 'archive') {
             $query->whereIn('status', ['cancelled', 'cancelled_by_user']);
         } else {
@@ -36,13 +33,22 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        // Сбрасываем флаги ПЕРЕД загрузкой данных
+        $needsBroadcast = false;
         if ($order->has_unseen_activity) {
-            $order->update(['has_unseen_activity' => false]);
+            $order->has_unseen_activity = false;
+            $needsBroadcast = true;
         }
-        $order->unreadMessages()->update(['is_read' => true]);
+        if ($order->unreadMessages()->exists()) {
+            $order->unreadMessages()->update(['is_read' => true]);
+            $needsBroadcast = true;
+        }
 
-        // Подгружаем данные для Vue уже с "чистыми" флагами
+        if ($needsBroadcast) {
+            $order->save();
+            // ГЛАВНОЕ ИСПРАВЛЕНИЕ: Сообщаем всем, что уведомления прочитаны
+            broadcast(new OrderUpdated($order));
+        }
+
         $order->load(['user', 'items.product', 'messages']);
 
         return Inertia::render('Admin/OrderView', [
@@ -55,10 +61,9 @@ class OrderController extends Controller
         $request->validate([
             'status' => 'required|in:new,processing,shipped,cancelled,cancelled_by_user',
         ]);
-
         $order->update(['status' => $request->status]);
-
-        return back();
+        broadcast(new OrderUpdated($order));
+        return response()->json(['success' => true]);
     }
 
     public function getMessages(Order $order)
@@ -70,17 +75,15 @@ class OrderController extends Controller
     {
         $request->validate(['message' => 'required|string']);
 
-        $message = OrderMessage::create([   // <-- должно быть $message =
+        $message = OrderMessage::create([
             'order_id'    => $order->id,
-            'sender_role' => 'user',
+            'sender_role' => 'admin',
             'message'     => $request->message,
         ]);
 
-        $order->update(['has_unseen_activity' => true]);
-
-        broadcast(new NewOrderMessage($message));  // <-- использует $message
-
-        return back();
+        broadcast(new NewOrderMessage($message));
+        
+        return response()->json($message);
     }
 
     public function updateContacts(Order $order, Request $request)
@@ -94,7 +97,7 @@ class OrderController extends Controller
         ]);
 
         $order->update($request->only(['city', 'street', 'house', 'comment', 'phone']));
-
-        return back();
+        broadcast(new OrderUpdated($order));
+        return response()->json(['success' => true]);
     }
 }

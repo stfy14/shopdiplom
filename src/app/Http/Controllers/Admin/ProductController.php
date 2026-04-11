@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Events\ProductUpdated;
+use App\Events\OrderUpdated;
 use App\Models\ProductCharacteristic;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -73,6 +75,8 @@ class ProductController extends Controller
             }
         }
 
+        broadcast(new ProductUpdated());
+
         return redirect()->route('admin.products');
     }
 
@@ -126,18 +130,22 @@ class ProductController extends Controller
             }
         }
 
+        broadcast(new ProductUpdated());
+
         return redirect()->route('admin.products');
     }
 
     public function destroy(Product $product)
     {
         $product->update(['is_deleted' => true]);
+        broadcast(new ProductUpdated());
         return back();
     }
 
     public function restore(Product $product)
     {
         $product->update(['is_deleted' => false]);
+        broadcast(new ProductUpdated());
         return back();
     }
 }

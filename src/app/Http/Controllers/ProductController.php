@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Cart;
+use App\Events\OrderUpdated;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 

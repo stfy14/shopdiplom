@@ -10,9 +10,8 @@ const props = defineProps({
 const messages = ref(props.order.messages ??[])
 const chatBox = ref(null)
 const msgInput = ref(null)
-
-const msgForm = useForm({ message: '' })
-let pollInterval = null
+const messageText = ref('')
+const isSending = ref(false)
 
 // ЖЕЛЕЗНАЯ СОРТИРОВКА (исправляет баг с переворачиванием чата)
 const sortedMessages = computed(() => {
@@ -56,15 +55,36 @@ function scrollToBottom() {
     unreadCount.value = 0
 }
 
-watch(messages, async (newVal, oldVal) => {
-    const newMessagesCount = newVal.length - oldVal.length
-    await nextTick()
-    if (isAtBottom.value) {
-        scrollToBottom()
-    } else if (newMessagesCount > 0) {
-        unreadCount.value += newMessagesCount
+watch(() => messages.value.length, async (newLen, oldLen) => {
+    const newMessagesCount = newLen - oldLen
+    if (newMessagesCount > 0) {
+        await nextTick()
+        if (isAtBottom.value) {
+            scrollToBottom()
+        } else {
+            unreadCount.value += newMessagesCount
+        }
     }
 })
+
+watch(() => props.order.messages, (newMessages) => {а
+    if (!newMessages) return;
+    newMessages.forEach(msg => {
+        if (!messages.value.find(m => m.id === msg.id)) {
+            messages.value.push(msg);
+        }
+    });
+}, { deep: true })
+
+watch(() => props.order, (newOrder) => {
+    if (!editingContacts.value) {
+        contactForm.city = newOrder.city;
+        contactForm.street = newOrder.street;
+        contactForm.house = newOrder.house;
+        contactForm.comment = newOrder.comment;
+        contactForm.phone = newOrder.phone;
+    }
+}, { deep: true });
 
 // Авторазмер Textarea и анимация кнопки
 function resizeTextarea() {
@@ -98,23 +118,61 @@ function loadMessages() {
         .then(data => { messages.value = data })
 }
 
+// 1. Обновленная функция отправки (Оптимистичный UI)
 function sendMessage() {
-    if (!msgForm.message.trim()) return
-    msgForm.post(`/orders/${props.order.id}/messages`, {
-        preserveScroll: true,
-        preserveState: true,
-        onSuccess: () => {
-            msgForm.reset()
-            isExpanded.value = false
-            if(msgInput.value) msgInput.value.style.height = '44px'
-            loadMessages()
-            nextTick(() => scrollToBottom())
-        }
-    })
+    if (!messageText.value.trim() || isSending.value) return
+
+    const text = messageText.value
+    messageText.value = ''
+    isExpanded.value = false
+    if (msgInput.value) msgInput.value.style.height = '44px'
+
+    isSending.value = true
+
+    // === ОПТИМИСТИЧНЫЙ UI ===
+    // Создаем временное сообщение и сразу кидаем его в чат
+    const tempId = 'temp_' + Date.now()
+    const fakeMessage = {
+        id: tempId,
+        message: text,
+        sender_role: 'user', // У клиента это 'user'
+        created_at: new Date().toISOString(),
+        isTemp: true // Флажок, чтобы мы знали, что оно еще не в базе
+    }
+    messages.value.push(fakeMessage)
+    
+    // Принудительно скроллим вниз прямо сейчас
+    nextTick(() => scrollToBottom())
+
+    // === ФОНОВАЯ ОТПРАВКА ===
+    axios.post(`/orders/${props.order.id}/messages`, { message: text })
+        .then(res => {
+            isSending.value = false
+            const realMsg = res.data
+            
+            // Ищем наше временное сообщение
+            const index = messages.value.findIndex(m => m.id === tempId)
+            if (index !== -1) {
+                // Подменяем фейк на настоящее (с правильным ID из базы)
+                messages.value[index] = realMsg
+            }
+        })
+        .catch(err => {
+            isSending.value = false
+            // Если ошибка — удаляем фейк с экрана и возвращаем текст в инпут
+            const index = messages.value.findIndex(m => m.id === tempId)
+            if (index !== -1) messages.value.splice(index, 1)
+            
+            messageText.value = text 
+            alert('Ошибка при отправке сообщения')
+        })
 }
 
 function cancelOrder() {
-    if (confirm('Отменить заказ?')) router.post(`/orders/${props.order.id}/cancel`)
+    if (confirm('Отменить заказ?')) {
+        axios.post(`/orders/${props.order.id}/cancel`)
+            .catch(error => alert('Не удалось отменить заказ'));
+    }
 }
 
 const contactForm = useForm({
@@ -127,20 +185,45 @@ const contactForm = useForm({
 const editingContacts = ref(false)
 
 function saveContacts() {
-    contactForm.patch(`/orders/${props.order.id}/contacts`, {
-        onSuccess: () => { editingContacts.value = false }
-    })
+    axios.patch(`/orders/${props.order.id}/contacts`, contactForm.data())
+        .then(() => {
+            editingContacts.value = false;
+        })
+        .catch(error => {
+            if (error.response.status === 422) {
+                contactForm.setError(error.response.data.errors);
+            }
+        });
 }
 
 onMounted(() => {
-    pollInterval = setInterval(() => {
-        loadMessages()
-        router.reload({ only: ['order'], preserveScroll: true })
-    }, 3000)
+    window.Echo.private(`order.${props.order.id}`)
+        .listen('.NewOrderMessage', (message) => {
+            const exists = messages.value.find(m => m.id === message.id)
+            if (!exists) {
+                // Если прилетело сообщение по сокету, проверяем: 
+                // нет ли у нас на экране фейка с таким же текстом? (на случай если сокет обогнал Axios)
+                const tempIndex = messages.value.findIndex(m => m.isTemp && m.message === message.message)
+                if (tempIndex !== -1) {
+                    // Заменяем фейк на реальное сообщение от сокета
+                    messages.value[tempIndex] = message
+                } else {
+                    messages.value.push(message)
+                }
+            }
+        })
+        .listen('.OrderUpdated', () => {
+            // Если статус или контакты изменились — обновляем данные заказа
+            router.reload({ only: ['order'], preserveScroll: true })
+        })
+
     setTimeout(scrollToBottom, 300)
 })
 
-onUnmounted(() => clearInterval(pollInterval))
+onUnmounted(() => {
+    window.Echo.leave(`private-order.${props.order.id}`)
+})
+
 </script>
 
 <template>
@@ -242,7 +325,7 @@ onUnmounted(() => clearInterval(pollInterval))
                     <div v-if="messages.length === 0" class="text-center text-gray-400 text-sm my-auto">Напишите нам, если у вас есть вопросы</div>
                     
                     <!-- ИСПОЛЬЗУЕМ sortedMessages ВМЕСТО messages -->
-                    <div v-for="msg in sortedMessages" :key="msg.id" :class="['max-w-[85%] p-3 text-sm relative break-words', msg.sender_role === 'user' ? 'bg-blue-500 text-white self-end rounded-2xl rounded-br-sm shadow-sm' : 'bg-white text-gray-800 self-start rounded-2xl rounded-bl-sm border shadow-sm']">
+                    <div v-for="msg in sortedMessages" :key="msg.id" :class="['max-w-[85%] p-3 text-sm relative break-words', msg.sender_role === 'user' ? 'bg-blue-500 text-white self-end rounded-2xl rounded-br-sm shadow-sm' : 'bg-white text-gray-800 self-start rounded-2xl rounded-bl-sm border shadow-sm', msg.isTemp ? 'opacity-70 transition-opacity duration-300' : '']">
                         <span class="whitespace-pre-wrap">{{ msg.message }}</span>
                         <div :class="['text-[10px] text-right mt-1', msg.sender_role === 'user' ? 'text-blue-100' : 'text-gray-400']">
                             {{ formatTime(msg.created_at) }}
@@ -262,7 +345,7 @@ onUnmounted(() => clearInterval(pollInterval))
                     <div :class="['flex items-stretch bg-gray-100 p-1 border border-transparent focus-within:border-blue-400 focus-within:bg-white transition-all duration-300 ease-in-out shadow-inner', isExpanded ? 'rounded-2xl gap-0' : 'rounded-[24px] gap-2']">
                         <textarea 
                             ref="msgInput"
-                            v-model="msgForm.message" 
+                            v-model="messageText" 
                             @input="resizeTextarea" 
                             @keydown="handleEnter" 
                             placeholder="Сообщение..." 
@@ -270,10 +353,11 @@ onUnmounted(() => clearInterval(pollInterval))
                             class="flex-grow bg-transparent border-0 border-transparent shadow-none outline-none focus:outline-none focus:ring-0 focus:border-transparent text-[15px] py-[12px] px-4 resize-none leading-[20px] m-0 block" 
                             style="height: 44px;">
                         </textarea>
-                        <!-- Заменили rounded-full на rounded-[22px], а при расширении делаем rounded-l-none (слева без закруглений) -->
+
+                        <!-- В кнопке меняем disabled и привязку -->
                         <button 
                             @click="sendMessage" 
-                            :disabled="!msgForm.message.trim() || msgForm.processing" 
+                            :disabled="!messageText.trim() || isSending" 
                             :class="['w-[44px] flex-shrink-0 text-white flex items-center justify-center disabled:opacity-50 disabled:bg-gray-300 transition-all duration-300 ease-in-out', isExpanded ? 'rounded-l-md rounded-r-xl bg-blue-500 hover:bg-blue-600' : 'rounded-[22px] bg-blue-500 hover:bg-blue-600']">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 ml-0.5">
                                 <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />

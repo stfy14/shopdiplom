@@ -1,6 +1,7 @@
 <script setup>
 import ShopLayout from '@/Layouts/ShopLayout.vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, router } from '@inertiajs/vue3' // ДОБАВИТЬ router
+import { onMounted, onUnmounted } from 'vue'   // ДОБАВИТЬ хуки
 
 const props = defineProps({
     orders: Array,
@@ -22,6 +23,18 @@ function formatPrice(price) {
 function formatDate(dt) {
     return new Date(dt).toLocaleDateString('ru-RU')
 }
+
+onMounted(() => {
+    window.Echo.private(`user.${props.user.id}`)
+        .listen('.OrderUpdated', () => {
+            router.reload({ only:['orders'], preserveScroll: true, preserveState: true })
+        })
+})
+
+onUnmounted(() => {
+    window.Echo.leave(`private-user.${props.user.id}`)
+})
+
 </script>
 
 <template>

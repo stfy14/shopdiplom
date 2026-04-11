@@ -41,7 +41,7 @@ function formatDate(dt) { return new Date(dt).toLocaleDateString('ru-RU', { day:
 <template>
     <div>
         <div class="flex gap-2 mb-6 p-1 bg-white border border-gray-100 rounded-xl shadow-sm inline-flex">
-            <Link href="/admin/orders" :class="['flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition', tab === 'active' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50']">
+            <Link href="/admin/orders" :class="['flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition', tab === 'active' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50']">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3"/></svg>
                 Активные
             </Link>
@@ -60,7 +60,7 @@ function formatDate(dt) { return new Date(dt).toLocaleDateString('ru-RU', { day:
         </div>
 
         <div class="flex flex-col gap-3">
-            <div v-if="orders.length === 0" class="text-center py-16 text-gray-400 bg-white rounded-3xl border border-gray-100">
+            <div v-if="orders.length === 0" class="text-center py-16 text-gray-400 bg-white rounded-3xl border border-gray-100 shadow-sm">
                 В этой категории нет заказов
             </div>
 
@@ -92,13 +92,13 @@ function formatDate(dt) { return new Date(dt).toLocaleDateString('ru-RU', { day:
                     </span>
                 </div>
                 <div class="absolute -top-1.5 -right-1.5 flex items-center gap-1.5">
-                    <div v-if="order.status === 'new'" class="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-sm text-sm border-2 border-white" title="Новый заказ">
+                    <div v-if="order.status === 'new'" class="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md text-sm border-2 border-white" title="Новый заказ">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </div>
-                    <div v-if="order.unread_messages_count > 0" class="w-7 h-7 rounded-full bg-yellow-400 text-yellow-900 flex items-center justify-center shadow-sm text-sm border-2 border-white" title="Новое сообщение">
+                    <div v-if="order.unread_messages_count > 0" class="w-7 h-7 rounded-full bg-yellow-400 text-yellow-900 flex items-center justify-center shadow-md text-sm border-2 border-white" title="Новое сообщение">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                     </div>
-                    <div v-if="order.has_unseen_activity && order.status !== 'new'" class="w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-sm text-sm border-2 border-white" title="Клиент обновил данные">
+                    <div v-if="order.has_unseen_activity && order.status !== 'new'" class="w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md text-sm border-2 border-white" title="Клиент обновил данные">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                     </div>
                 </div>

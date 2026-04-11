@@ -17,13 +17,15 @@ function clearNotification(productId) { router.patch(`/cart/${productId}/clear-n
 <template>
     <Transition name="popup">
         <div v-if="show" class="fixed inset-0 z-50 flex justify-end">
-            <!-- Overlay -->
-            <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity" @click="emit('close')" />
+            <!-- ИСПРАВЛЕНИЕ: Плавная анимация для backdrop-blur -->
+            <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-300" @click="emit('close')" />
             
-            <!-- Panel -->
             <div class="relative w-full max-w-sm bg-gray-50 h-full shadow-2xl flex flex-col">
                 <div class="p-5 border-b border-gray-200 flex items-center justify-between bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-                    <h2 class="font-black text-xl text-gray-900">Корзина</h2>
+                    <h2 class="font-black text-xl text-gray-900 flex items-center gap-3">
+                        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        Корзина
+                    </h2>
                     <button @click="emit('close')" class="text-gray-400 hover:text-gray-900 text-xl transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
@@ -37,16 +39,21 @@ function clearNotification(productId) { router.patch(`/cart/${productId}/clear-n
                     </div>
 
                     <div v-else class="flex flex-col gap-3">
-                        <!-- Карточка товара теперь белая с тенью -->
-                        <div v-for="item in normalizedItems" :key="item.id" class="flex flex-col gap-2 p-2.5 rounded-2xl transition-all hover:shadow-md border border-gray-100 bg-white shadow-sm">
+                        <div v-for="item in normalizedItems" :key="item.id" class="flex flex-col gap-2 p-2.5 rounded-2xl transition-all bg-white shadow-sm border border-gray-200 hover:border-gray-300 hover:shadow-md">
                             
-                            <div v-if="item.old_price" class="bg-yellow-50 shadow-sm p-3 rounded-xl text-xs relative mb-1 border border-yellow-100">
-                                <strong class="text-yellow-800 block mb-1 text-[13px]">⚠️ Внимание! Цена изменилась</strong>
-                                <div class="text-yellow-700">Была: <span class="line-through opacity-70">{{ formatPrice(item.old_price) }} ₽</span></div>
-                                <div class="text-yellow-700">Стала: <span class="font-bold text-blue-600">{{ formatPrice(item.product?.price_with_discount) }} ₽</span></div>
-                                <div v-if="item.price_change_reason" class="text-yellow-600/90 mt-1.5 leading-tight font-medium">{{ item.price_change_reason }}</div>
-                                <button @click="clearNotification(item.product_id)" class="mt-2 w-full text-center text-yellow-800 bg-yellow-200/50 hover:bg-yellow-300/80 px-2 py-1.5 rounded-lg font-bold transition">Понятно</button>
-                            </div>
+                            <!-- ИСПРАВЛЕНИЕ: Добавили Transition для плавной анимации уведомления -->
+                            <Transition name="fade">
+                                <div v-if="item.old_price" class="bg-yellow-50 shadow-sm p-3 rounded-xl text-xs relative mb-1 border border-yellow-100">
+                                    <strong class="text-yellow-800 block mb-1 text-[13px] flex items-center gap-1.5">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                        Цена изменилась!
+                                    </strong>
+                                    <div class="text-yellow-700">Была: <span class="line-through opacity-70">{{ formatPrice(item.old_price) }} ₽</span></div>
+                                    <div class="text-yellow-700">Стала: <span class="font-bold text-blue-600">{{ formatPrice(item.product?.price_with_discount) }} ₽</span></div>
+                                    <div v-if="item.price_change_reason" class="text-yellow-600/90 mt-1.5 leading-tight font-medium">{{ item.price_change_reason }}</div>
+                                    <button @click="clearNotification(item.product_id)" class="mt-2 w-full text-center text-yellow-800 bg-yellow-200/50 hover:bg-yellow-300/80 px-2 py-1.5 rounded-lg font-bold transition">Понятно</button>
+                                </div>
+                            </Transition>
                             
                             <div class="flex items-center gap-3">
                                 <div class="relative flex-shrink-0">
@@ -89,4 +96,7 @@ function clearNotification(productId) { router.patch(`/cart/${productId}/clear-n
 .popup-enter-from, .popup-leave-to { opacity: 0; }
 .popup-enter-from .relative { transform: translateX(100%); }
 .popup-leave-to .relative { transform: translateX(100%); }
+
+.fade-enter-active, .fade-leave-active { transition: all 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-10px); }
 </style>

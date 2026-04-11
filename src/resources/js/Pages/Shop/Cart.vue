@@ -4,7 +4,6 @@ import { Link, router, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 
 const page = usePage()
-// Берем данные из глобальных пропсов, которые обновляются вебсокетом в ShopLayout
 const items = computed(() => page.props.cartItems ??[])
 
 function formatPrice(price) { return new Intl.NumberFormat('ru-RU').format(price) }
@@ -24,7 +23,7 @@ function clearNotification(productId) { router.patch(`/cart/${productId}/clear-n
 
 <template>
     <ShopLayout>
-        <h1 class="text-2xl font-black mb-6 text-gray-900">🛒 Корзина</h1>
+        <h1 class="text-2xl font-black mb-6 text-gray-900">Корзина</h1>
 
         <div v-if="items.length > 0" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2 flex flex-col gap-4">
@@ -32,14 +31,17 @@ function clearNotification(productId) { router.patch(`/cart/${productId}/clear-n
                     
                     <div v-if="item.old_price" class="bg-yellow-50 shadow-sm text-yellow-800 px-4 py-3 rounded-xl text-sm flex justify-between items-start md:items-center">
                         <div>
-                            <strong>⚠️ Внимание!</strong> Цена изменилась: была {{ formatPrice(item.old_price) }} ₽, стала {{ formatPrice(item.product?.price_with_discount) }} ₽.<br/>
-                            <span v-if="item.price_change_reason" class="text-xs text-yellow-600 mt-1 block">{{ item.price_change_reason }}</span>
+                            <strong class="flex items-center gap-1.5">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                Внимание! Цена изменилась
+                            </strong>
+                            <div class="mt-1 pl-1">Была: {{ formatPrice(item.old_price) }} ₽, стала: {{ formatPrice(item.product?.price_with_discount) }} ₽.</div>
+                            <span v-if="item.price_change_reason" class="text-xs text-yellow-600 mt-1 block pl-1">{{ item.price_change_reason }}</span>
                         </div>
                         <button @click="clearNotification(item.product_id)" class="text-yellow-700 hover:text-yellow-900 font-bold ml-4 whitespace-nowrap bg-yellow-200/50 hover:bg-yellow-300/50 px-3 py-1.5 rounded-lg transition">Понятно</button>
                     </div>
 
                     <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-                        <!-- Контейнер картинки с относительным позиционированием для бейджа -->
                         <div class="relative flex-shrink-0">
                             <span v-if="item.product?.discount > 0" class="absolute -top-2 -left-2 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md shadow-sm z-10">-{{ item.product.discount }}%</span>
                             <img :src="item.product?.image ? `/storage/${item.product.image}` : 'https://placehold.co/80?text=?'" class="w-20 h-20 object-contain rounded-xl bg-gray-50 border border-gray-100 p-2" />
@@ -87,7 +89,7 @@ function clearNotification(productId) { router.patch(`/cart/${productId}/clear-n
         </div>
 
         <div v-else class="text-center bg-white rounded-3xl py-24 shadow-sm border border-gray-100">
-            <div class="text-6xl mb-6">🛒</div>
+            <svg class="w-24 h-24 text-gray-300 mb-4 mx-auto" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c.51 0 .962-.343 1.087-.835l1.823-6.44a1.125 1.125 0 00-.44-1.229l-5.432-4.075a1.125 1.125 0 00-1.518.056L5.64 5.39a1.125 1.125 0 00-.056 1.518l3.65 4.563M7.5 14.25L5.106 5.106M17.25 20.25a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zM7.5 20.25a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg>
             <div class="text-gray-500 text-lg mb-8 font-medium">Корзина пуста</div>
             <Link href="/" class="px-8 py-3.5 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition shadow-md">Перейти в каталог</Link>
         </div>

@@ -19,64 +19,64 @@ const statusMap = {
 
 <template>
     <div>
-        <h1 class="text-2xl font-bold mb-6 text-gray-800">Обзор системы</h1>
+        <h1 class="text-2xl font-black mb-6 text-gray-900">Обзор системы</h1>
         
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div class="text-gray-400 text-sm font-bold uppercase mb-2">Новых заказов</div>
-                <div class="text-3xl font-black text-blue-600">{{ stats.newOrders }}</div>
+                <div class="text-4xl font-black text-blue-600">{{ stats.newOrders }}</div>
             </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div class="text-gray-400 text-sm font-bold uppercase mb-2">Выручка</div>
-                <div class="text-3xl font-black text-green-600">{{ formatPrice(stats.totalRevenue) }} ₽</div>
+                <div class="text-4xl font-black text-green-600">{{ formatPrice(stats.totalRevenue) }} ₽</div>
             </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div class="text-gray-400 text-sm font-bold uppercase mb-2">Активных товаров</div>
-                <div class="text-3xl font-black text-gray-800">{{ stats.totalProducts }}</div>
-                <div v-if="stats.outOfStock > 0" class="text-red-500 text-xs mt-1 font-medium">Нет в наличии: {{ stats.outOfStock }} шт.</div>
+                <div class="text-4xl font-black text-gray-800">{{ stats.totalProducts }}</div>
+                <div v-if="stats.outOfStock > 0" class="text-red-500 text-xs mt-1 font-bold">Нет в наличии: {{ stats.outOfStock }} шт.</div>
             </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div class="text-gray-400 text-sm font-bold uppercase mb-2">Пользователей</div>
-                <div class="text-3xl font-black text-gray-800">{{ stats.totalUsers }}</div>
+                <div class="text-4xl font-black text-gray-800">{{ stats.totalUsers }}</div>
             </div>
         </div>
 
-        <h2 class="text-lg font-bold mb-4 text-gray-800">Последние заказы</h2>
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-            <table class="w-full">
-                <thead class="bg-gray-50 border-b">
-                    <tr>
-                        <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase">Заказ</th>
-                        <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase">Клиент</th>
-                        <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase">Сумма</th>
-                        <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase">Статус</th>
-                        <th class="text-right px-6 py-3"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-50">
-                    <tr v-if="recentOrders.length === 0">
-                        <td colspan="5" class="text-center py-8 text-gray-400">Нет заказов</td>
-                    </tr>
-                    <tr v-for="order in recentOrders" :key="order.id" class="hover:bg-gray-50 transition">
-                        <td class="px-6 py-4">
-                            <div class="font-bold text-gray-800">#{{ order.id }}</div>
-                            <div class="text-xs text-gray-400">{{ formatDate(order.created_at) }}</div>
-                        </td>
-                        <td class="px-6 py-4 font-medium">{{ order.user?.name }}</td>
-                        <td class="px-6 py-4 font-bold">{{ formatPrice(order.total_price) }} ₽</td>
-                        <td class="px-6 py-4">
-                            <span :class="['px-2 py-1 rounded-full text-xs font-bold', statusMap[order.status]?.color]">
-                                {{ statusMap[order.status]?.label }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                            <Link :href="`/admin/orders/${order.id}`" class="px-3 py-1.5 border border-blue-200 text-blue-600 rounded-lg text-xs hover:bg-blue-50 transition font-medium">
-                                Открыть
-                            </Link>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <h2 class="text-xl font-black mb-4 text-gray-900">Последние заказы</h2>
+        
+        <div class="grid grid-cols-12 gap-4 px-5 text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
+            <div class="col-span-2">Заказ</div>
+            <div class="col-span-3">Клиент</div>
+            <div class="col-span-3">Сумма</div>
+            <div class="col-span-4">Статус</div>
+        </div>
+
+        <div class="flex flex-col gap-3">
+            <div v-if="recentOrders.length === 0" class="text-center py-16 text-gray-400 bg-white rounded-3xl border border-gray-100 shadow-sm">
+                Пока нет ни одного заказа
+            </div>
+            <Link
+                v-for="order in recentOrders"
+                :key="order.id"
+                :href="`/admin/orders/${order.id}`"
+                class="relative grid grid-cols-12 gap-4 items-center bg-white rounded-2xl shadow-sm p-4 transition-all hover:shadow-md hover:-translate-y-px border border-gray-100 group"
+            >
+                <div class="col-span-2">
+                    <div class="font-black text-gray-900">#{{ order.id }}</div>
+                    <div class="text-xs text-gray-400 mt-0.5">{{ formatDate(order.created_at) }}</div>
+                </div>
+                <div class="col-span-3 font-bold text-gray-900 truncate">{{ order.user?.name }}</div>
+                <div class="col-span-3 font-black text-gray-900">{{ formatPrice(order.total_price) }} ₽</div>
+                <div class="col-span-4">
+                     <span :class="['px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap', statusMap[order.status]?.color]">
+                        {{ statusMap[order.status]?.label }}
+                    </span>
+                </div>
+                <div class="absolute top-1/2 -translate-y-1/2 right-5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span class="px-4 py-2 border rounded-xl text-xs font-bold text-gray-600 transition bg-white/50 backdrop-blur-sm shadow-sm">
+                        Открыть
+                    </span>
+                </div>
+            </Link>
         </div>
     </div>
 </template>

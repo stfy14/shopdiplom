@@ -47,21 +47,14 @@ function phoneInput(e) {
             <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
                 <h2 class="font-bold mb-4 text-gray-700">Ваш заказ</h2>
                 <div class="flex flex-col gap-3">
-                    <div
-                        v-for="item in items"
-                        :key="item.id"
-                        class="flex items-center gap-3"
-                    >
-                        <img
-                            :src="item.product?.image ? `/storage/${item.product.image}` : 'https://placehold.co/50?text=?'"
-                            class="w-12 h-12 object-contain rounded-lg bg-gray-50 p-1"
-                        />
+                    <div v-for="item in items" :key="item.id" class="flex items-center gap-3">
+                        <img :src="item.product?.image ? `/storage/${item.product.image}` : 'https://placehold.co/50?text=?'" class="w-12 h-12 object-contain rounded-lg bg-gray-50 p-1" />
                         <div class="flex-grow">
                             <div class="font-medium text-sm">{{ item.product?.title }}</div>
                             <div class="text-gray-400 text-xs">{{ item.quantity }} шт.</div>
                         </div>
                         <div class="font-bold text-sm">
-                            {{ formatPrice(item.product?.price * item.quantity) }} ₽
+                            {{ formatPrice((item.product?.price_with_discount ?? 0) * item.quantity) }} ₽
                         </div>
                     </div>
                 </div>

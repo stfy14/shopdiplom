@@ -1,134 +1,95 @@
 <script setup>
 import ShopLayout from '@/Layouts/ShopLayout.vue'
-import { Link, router } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { Link, router, usePage } from '@inertiajs/vue3'
+import { computed } from 'vue'
 
-const props = defineProps({
-    items: Array,
-})
+const page = usePage()
+// Берем данные из глобальных пропсов, которые обновляются вебсокетом в ShopLayout
+const items = computed(() => page.props.cartItems ??[])
 
-function formatPrice(price) {
-    return new Intl.NumberFormat('ru-RU').format(price)
-}
-
-const total = () => props.items.reduce((sum, item) => {
-    return sum + (item.product?.price ?? 0) * item.quantity
-}, 0)
+function formatPrice(price) { return new Intl.NumberFormat('ru-RU').format(price) }
+const total = () => items.value.reduce((sum, item) => sum + (item.product?.price_with_discount ?? 0) * item.quantity, 0)
 
 function updateQuantity(productId, quantity) {
-    if (quantity <= 0) {
-        removeItem(productId)
-        return
-    }
-    router.patch(`/cart/${productId}`, { quantity }, {
-        preserveScroll: true,
-        preserveState: true,
-    })
+    if (quantity <= 0) { removeItem(productId); return }
+    router.patch(`/cart/${productId}`, { quantity }, { preserveScroll: true, preserveState: true })
 }
-
 function handleInput(productId, e) {
     const val = parseInt(e.target.value)
     if (!isNaN(val)) updateQuantity(productId, val)
 }
-
-function removeItem(productId) {
-    router.delete(`/cart/${productId}`, {
-        preserveScroll: true,
-        preserveState: true,
-    })
-}
+function removeItem(productId) { router.delete(`/cart/${productId}`, { preserveScroll: true, preserveState: true }) }
+function clearNotification(productId) { router.patch(`/cart/${productId}/clear-notification`, {}, { preserveScroll: true, preserveState: true }) }
 </script>
 
 <template>
     <ShopLayout>
-        <h1 class="text-2xl font-bold mb-6">🛒 Корзина</h1>
+        <h1 class="text-2xl font-black mb-6 text-gray-900">🛒 Корзина</h1>
 
         <div v-if="items.length > 0" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2 flex flex-col gap-4">
-                <div
-                    v-for="item in items"
-                    :key="item.id"
-                    class="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-4"
-                >
-                    <img
-                        :src="item.product?.image ? `/storage/${item.product.image}` : 'https://placehold.co/80?text=?'"
-                        class="w-20 h-20 object-contain rounded-xl bg-gray-50 p-2 flex-shrink-0"
-                    />
-
-                    <div class="flex-grow">
-                        <Link :href="`/product/${item.product_id}`" class="font-semibold text-gray-900 hover:text-blue-600">
-                            {{ item.product?.title }}
-                        </Link>
-                        <div class="text-blue-600 font-bold mt-1">
-                            {{ formatPrice(item.product?.price) }} ₽
+                <div v-for="item in items" :key="item.id" class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 flex flex-col gap-4">
+                    
+                    <div v-if="item.old_price" class="bg-yellow-50 shadow-sm text-yellow-800 px-4 py-3 rounded-xl text-sm flex justify-between items-start md:items-center">
+                        <div>
+                            <strong>⚠️ Внимание!</strong> Цена изменилась: была {{ formatPrice(item.old_price) }} ₽, стала {{ formatPrice(item.product?.price_with_discount) }} ₽.<br/>
+                            <span v-if="item.price_change_reason" class="text-xs text-yellow-600 mt-1 block">{{ item.price_change_reason }}</span>
                         </div>
+                        <button @click="clearNotification(item.product_id)" class="text-yellow-700 hover:text-yellow-900 font-bold ml-4 whitespace-nowrap bg-yellow-200/50 hover:bg-yellow-300/50 px-3 py-1.5 rounded-lg transition">Понятно</button>
                     </div>
 
-                    <!-- Количество -->
-                    <div class="flex items-center gap-2">
-                        <button
-                            @click="updateQuantity(item.product_id, item.quantity - 1)"
-                            class="w-8 h-8 rounded-full bg-gray-100 hover:bg-red-100 hover:text-red-500 transition font-bold"
-                        >
-                            −
-                        </button>
-                        <input
-                            type="number"
-                            :value="item.quantity"
-                            @change="handleInput(item.product_id, $event)"
-                            min="1"
-                            :max="item.product?.quantity"
-                            class="w-12 text-center font-bold border border-gray-200 rounded-lg py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <button
-                            @click="updateQuantity(item.product_id, item.quantity + 1)"
-                            :disabled="item.quantity >= item.product?.quantity"
-                            class="w-8 h-8 rounded-full bg-gray-100 hover:bg-blue-100 hover:text-blue-500 transition disabled:opacity-40 font-bold"
-                        >
-                            +
-                        </button>
-                    </div>
-
-                    <div class="text-right min-w-24 flex-shrink-0">
-                        <div class="font-bold text-gray-900">
-                            {{ formatPrice(item.product?.price * item.quantity) }} ₽
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+                        <!-- Контейнер картинки с относительным позиционированием для бейджа -->
+                        <div class="relative flex-shrink-0">
+                            <span v-if="item.product?.discount > 0" class="absolute -top-2 -left-2 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md shadow-sm z-10">-{{ item.product.discount }}%</span>
+                            <img :src="item.product?.image ? `/storage/${item.product.image}` : 'https://placehold.co/80?text=?'" class="w-20 h-20 object-contain rounded-xl bg-gray-50 border border-gray-100 p-2" />
                         </div>
-                        <button
-                            @click="removeItem(item.product_id)"
-                            class="text-red-400 hover:text-red-600 text-sm mt-1 transition"
-                        >
-                            Удалить
-                        </button>
+                        
+                        <div class="flex-grow">
+                            <Link :href="`/product/${item.product_id}`" class="font-bold text-gray-900 hover:text-blue-600 transition">{{ item.product?.title }}</Link>
+                            <div class="mt-1 flex items-center gap-2">
+                                <span class="text-blue-600 font-black">{{ formatPrice(item.product?.price_with_discount) }} ₽</span>
+                                <span v-if="item.product?.discount > 0" class="text-xs text-gray-400 line-through font-medium">{{ formatPrice(item.product?.price) }} ₽</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-6 sm:ml-auto">
+                            <div class="flex items-center gap-1.5 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                                <button @click="updateQuantity(item.product_id, item.quantity - 1)" class="w-8 h-8 rounded-lg bg-white hover:bg-red-50 text-gray-500 hover:text-red-500 shadow-sm flex items-center justify-center transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/></svg>
+                                </button>
+                                <input type="number" :value="item.quantity" @change="handleInput(item.product_id, $event)" min="1" :max="item.product?.quantity" 
+                                    class="w-10 text-center font-bold bg-transparent border-none p-0 focus:ring-0 text-gray-800[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                                <button @click="updateQuantity(item.product_id, item.quantity + 1)" :disabled="item.quantity >= item.product?.quantity" class="w-8 h-8 rounded-lg bg-white hover:bg-blue-50 text-gray-500 hover:text-blue-500 shadow-sm flex items-center justify-center transition disabled:opacity-40">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                </button>
+                            </div>
+                            <div class="text-right min-w-[100px] flex-shrink-0">
+                                <div class="font-black text-gray-900 text-lg">{{ formatPrice((item.product?.price_with_discount ?? 0) * item.quantity) }} ₽</div>
+                                <button @click="removeItem(item.product_id)" class="text-gray-400 hover:text-red-500 text-sm mt-0.5 font-medium transition">Удалить</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="lg:col-span-1">
-                <div class="bg-white rounded-2xl p-6 shadow-sm sticky top-24">
-                    <h2 class="text-lg font-bold mb-4">Итого</h2>
-                    <div class="flex justify-between items-center mb-6">
-                        <span class="text-gray-500">Сумма:</span>
-                        <span class="text-2xl font-bold">{{ formatPrice(total()) }} ₽</span>
+                <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-100 sticky top-24">
+                    <h2 class="text-lg font-black mb-6 text-gray-900">Ваш заказ</h2>
+                    <div class="flex justify-between items-center mb-6 pb-6 border-b border-gray-100">
+                        <span class="text-gray-500 font-medium">Сумма:</span>
+                        <span class="text-3xl font-black text-gray-900 tracking-tight">{{ formatPrice(total()) }} ₽</span>
                     </div>
-                    <Link
-                        href="/checkout"
-                        class="block w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition text-center"
-                    >
-                        Оформить заказ
-                    </Link>
-                    <Link href="/" class="block text-center text-gray-400 hover:text-gray-600 text-sm mt-3 transition">
-                        Продолжить покупки
-                    </Link>
+                    <Link href="/checkout" class="block w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition text-center shadow-lg shadow-blue-600/20">Оформить заказ</Link>
+                    <Link href="/" class="block text-center text-gray-500 hover:text-blue-600 font-bold text-sm mt-5 transition">Продолжить покупки</Link>
                 </div>
             </div>
         </div>
 
-        <div v-else class="text-center py-24">
-            <div class="text-6xl mb-4">🛒</div>
-            <div class="text-gray-400 text-lg mb-6">Корзина пуста</div>
-            <Link href="/" class="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition">
-                Перейти в каталог
-            </Link>
+        <div v-else class="text-center bg-white rounded-3xl py-24 shadow-sm border border-gray-100">
+            <div class="text-6xl mb-6">🛒</div>
+            <div class="text-gray-500 text-lg mb-8 font-medium">Корзина пуста</div>
+            <Link href="/" class="px-8 py-3.5 bg-gray-900 text-white rounded-xl font-bold hover:bg-gray-800 transition shadow-md">Перейти в каталог</Link>
         </div>
     </ShopLayout>
 </template>

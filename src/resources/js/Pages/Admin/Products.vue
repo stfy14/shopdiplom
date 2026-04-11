@@ -10,8 +10,6 @@ const props = defineProps({
     tab: String,
 })
 
-// Именованный обработчик — нужен чтобы stopListening мог удалить именно его,
-// не трогая подписки ShopLayout на этом же канале
 const handleProductUpdated = () => {
     router.reload({ only: ['products'], preserveScroll: true, preserveState: true })
 }
@@ -22,22 +20,14 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-    // ВАЖНО: stopListening вместо leave()!
-    // leave() убивает весь канал включая подписки ShopLayout
     window.Echo.private('admin-notifications')
         .stopListening('.ProductUpdated', handleProductUpdated)
 })
 
-function formatPrice(price) {
-    return new Intl.NumberFormat('ru-RU').format(price)
-}
-
+function formatPrice(price) { return new Intl.NumberFormat('ru-RU').format(price) }
 function deleteProduct(id) {
-    if (confirm('Переместить в архив?')) {
-        router.delete(`/admin/products/${id}`)
-    }
+    if (confirm('Переместить в архив?')) { router.delete(`/admin/products/${id}`) }
 }
-
 function restoreProduct(id) {
     router.patch(`/admin/products/${id}/restore`)
 }
@@ -45,65 +35,73 @@ function restoreProduct(id) {
 
 <template>
     <div>
-        <div class="flex gap-2 mb-4">
-            <Link href="/admin" :class="['px-4 py-2 rounded-xl text-sm font-medium transition', tab === 'active' ? 'bg-blue-600 text-white' : 'bg-white border hover:bg-gray-50']">
-                Активные
-            </Link>
-            <Link href="/admin?tab=deleted" :class="['px-4 py-2 rounded-xl text-sm font-medium transition', tab === 'deleted' ? 'bg-red-500 text-white' : 'bg-white border border-red-200 text-red-500 hover:bg-red-50']">
-                🗑 Архив
-            </Link>
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+            <div class="flex gap-2 p-1 bg-white border border-gray-100 rounded-xl shadow-sm inline-flex">
+                <Link href="/admin/products" :class="['px-5 py-2 rounded-lg text-sm font-bold transition', tab === 'active' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50']">Активные</Link>
+                <Link href="/admin/products?tab=deleted" :class="['px-5 py-2 rounded-lg text-sm font-bold transition', tab === 'deleted' ? 'bg-red-500 text-white' : 'text-gray-500 hover:text-red-500 hover:bg-red-50']">🗑 Архив</Link>
+            </div>
+            
+            <div class="flex gap-2">
+                <Link href="/admin/categories" class="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition shadow-sm flex items-center gap-2">📂 <span class="hidden sm:inline">Категории</span></Link>
+                <Link href="/admin/characteristics" class="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition shadow-sm flex items-center gap-2">⚙️ <span class="hidden sm:inline">Характеристики</span></Link>
+                <Link href="/admin/products/create" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                    Добавить
+                </Link>
+            </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <table class="w-full">
-                <thead class="bg-gray-50 border-b">
-                    <tr>
-                        <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase">ID</th>
-                        <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase">Фото</th>
-                        <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase">Название</th>
-                        <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase">Цена</th>
-                        <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase">Остаток</th>
-                        <th class="text-left px-6 py-3 text-xs font-bold text-gray-400 uppercase">Категория</th>
-                        <th class="text-right px-6 py-3"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-50">
-                    <tr v-if="products.length === 0">
-                        <td colspan="7" class="text-center py-12 text-gray-400">Список пуст</td>
-                    </tr>
-                    <tr v-for="product in products" :key="product.id" class="hover:bg-gray-50 transition">
-                        <td class="px-6 py-4 text-gray-400 text-sm">#{{ product.id }}</td>
-                        <td class="px-6 py-4">
-                            <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
-                                <img :src="product.image ? `/storage/${product.image}` : 'https://placehold.co/50?text=?'" class="max-w-full max-h-full object-contain" />
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 font-medium">{{ product.title }}</td>
-                        <td class="px-6 py-4 font-bold">{{ formatPrice(product.price) }} ₽</td>
-                        <td class="px-6 py-4">
-                            <span :class="['px-2 py-1 rounded-full text-xs font-bold', product.quantity === 0 ? 'bg-red-100 text-red-600' : product.quantity < 5 ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600']">
-                                {{ product.quantity }} шт.
-                            </span>
-                        </td>
-                        <td class="px-6 py-4">
-                            <span class="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">{{ product.category?.name }}</span>
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                            <div class="flex justify-end gap-2">
-                                <Link v-if="tab === 'active'" :href="`/admin/products/${product.id}/edit`" class="px-3 py-1.5 border border-blue-300 text-blue-600 rounded-lg text-xs hover:bg-blue-50 transition">
-                                    ✏️ Изменить
-                                </Link>
-                                <button v-if="tab === 'active'" @click="deleteProduct(product.id)" class="px-3 py-1.5 border border-red-300 text-red-500 rounded-lg text-xs hover:bg-red-50 transition">
-                                    🗑
-                                </button>
-                                <button v-else @click="restoreProduct(product.id)" class="px-3 py-1.5 border border-green-300 text-green-600 rounded-lg text-xs hover:bg-green-50 transition">
-                                    ↩️ Восстановить
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="grid grid-cols-12 gap-4 px-5 text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
+            <div class="col-span-1">ID</div>
+            <div class="col-span-5">Товар</div>
+            <div class="col-span-2">Цена</div>
+            <div class="col-span-2">Наличие</div>
+            <div class="col-span-2 text-right">Действия</div>
+        </div>
+
+        <div class="flex flex-col gap-3">
+            <div v-if="products.length === 0" class="text-center py-16 text-gray-400 bg-white rounded-3xl border border-gray-100">
+                Список пуст
+            </div>
+
+            <div v-for="product in products" :key="product.id" class="grid grid-cols-12 gap-4 items-center bg-white rounded-2xl shadow-sm p-4 transition hover:shadow-md border border-gray-100">
+                <div class="col-span-1 text-gray-400 font-bold text-sm">#{{ product.id }}</div>
+                
+                <div class="col-span-5 flex items-center gap-4">
+                    <div class="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 p-1 flex-shrink-0">
+                        <img :src="product.image ? `/storage/${product.image}` : 'https://placehold.co/50?text=?'" class="max-w-full max-h-full object-contain" />
+                    </div>
+                    <div class="min-w-0">
+                        <div class="font-bold text-gray-900 truncate">{{ product.title }}</div>
+                        <div class="text-xs text-blue-600 font-bold uppercase mt-0.5">{{ product.category?.name }}</div>
+                    </div>
+                </div>
+
+                <div class="col-span-2">
+                    <div class="font-black text-gray-900">{{ formatPrice(product.price_with_discount ?? product.price) }} ₽</div>
+                    <div v-if="product.discount > 0" class="text-[11px] font-bold text-red-500">-{{ product.discount }}% скидка</div>
+                </div>
+
+                <div class="col-span-2">
+                    <span :class="['px-2.5 py-1 rounded-lg text-xs font-bold border', product.quantity === 0 ? 'bg-red-50 border-red-100 text-red-600' : product.quantity < 5 ? 'bg-yellow-50 border-yellow-100 text-yellow-700' : 'bg-green-50 border-green-100 text-green-700']">
+                        {{ product.quantity }} шт.
+                    </span>
+                </div>
+
+                <div class="col-span-2 flex justify-end gap-2">
+                    <template v-if="tab === 'active'">
+                        <Link :href="`/admin/products/${product.id}/edit`" class="w-9 h-9 bg-gray-50 hover:bg-blue-50 text-gray-400 hover:text-blue-600 rounded-xl flex items-center justify-center transition" title="Изменить">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                        </Link>
+                        <button @click="deleteProduct(product.id)" class="w-9 h-9 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-xl flex items-center justify-center transition" title="Удалить">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </template>
+                    <button v-else @click="restoreProduct(product.id)" class="px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl text-xs font-bold transition">
+                        Восстановить
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </template>

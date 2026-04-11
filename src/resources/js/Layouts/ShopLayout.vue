@@ -149,32 +149,40 @@ watch(() => user.value, (newUser, oldUser) => {
 
 <template>
     <div class="min-h-screen bg-gray-50 flex flex-col">
-        <nav class="bg-white shadow-sm sticky top-0 z-40">
+        <nav class="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-40 border-b border-gray-100">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-16">
-                    <Link href="/" class="flex items-center gap-2 font-bold text-xl text-gray-900">
-                        <span class="text-blue-600">⚙️</span> ЗПО РиТ
+                <div class="flex justify-between items-center h-[72px]">
+                    <!-- Логотип -->
+                    <Link href="/" class="flex items-center gap-2.5 font-black text-xl text-gray-900 tracking-tight group">
+                        <div class="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center text-lg shadow-sm group-hover:scale-105 transition-transform">⚙️</div>
+                        <span>ЗПО <span class="text-blue-600">РиТ</span></span>
                     </Link>
 
-                    <form action="/" method="GET" class="hidden md:flex flex-1 max-w-md mx-8">
-                        <div class="relative w-full">
-                            <input type="search" name="q" placeholder="Поиск товаров..." class="w-full pl-4 pr-10 py-2 rounded-full border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-                            <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</button>
+                    <!-- Поиск -->
+                    <form action="/" method="GET" class="hidden md:flex flex-1 max-w-xl mx-12">
+                        <div class="relative w-full flex items-center">
+                            <svg class="absolute left-4 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <input type="search" name="q" placeholder="Поиск оборудования..." 
+                                class="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-gray-100/80 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all text-sm font-medium placeholder-gray-400"/>
                         </div>
                     </form>
 
+                    <!-- Кнопки справа -->
                     <div class="flex items-center gap-3">
-                        <button @click="cartOpen = true" class="relative flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 transition text-sm font-medium">
-                            🛒 Корзина
-                            <span v-if="cartCount > 0" class="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{{ cartCount }}</span>
+                        <button @click="cartOpen = true" class="relative flex items-center justify-center w-11 h-11 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                            <span v-if="cartCount > 0" class="absolute -top-1 -right-1 bg-red-500 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm border-2 border-white">{{ cartCount }}</span>
                         </button>
                         <template v-if="user">
-                            <Link v-if="user.role === 'admin'" href="/admin" class="px-4 py-2 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition">Админка</Link>
-                            <Link href="/profile" class="px-4 py-2 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition">👤 Профиль</Link>
+                            <Link v-if="user.role === 'admin'" href="/admin" class="hidden sm:flex px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition shadow-sm">Админка</Link>
+                            <Link href="/profile" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 text-sm font-bold hover:bg-blue-100 transition">
+                                <div class="w-6 h-6 bg-blue-200/50 rounded-full flex items-center justify-center text-xs">👤</div>
+                                <span class="hidden sm:inline">Профиль</span>
+                            </Link>
                         </template>
                         <template v-else>
-                            <Link href="/login" class="px-4 py-2 rounded-full border border-blue-600 text-blue-600 text-sm font-medium hover:bg-blue-50 transition">Войти</Link>
-                            <Link href="/register" class="px-4 py-2 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition">Регистрация</Link>
+                            <Link href="/login" class="px-4 py-2.5 rounded-xl text-gray-600 text-sm font-bold hover:bg-gray-100 transition">Войти</Link>
+                            <Link href="/register" class="px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 shadow-sm transition">Регистрация</Link>
                         </template>
                     </div>
                 </div>

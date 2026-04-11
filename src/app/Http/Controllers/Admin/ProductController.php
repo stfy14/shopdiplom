@@ -24,7 +24,7 @@ class ProductController extends Controller
             ->latest()
             ->get();
 
-        return Inertia::render('Admin/Products', [
+        return Inertia::render('Admin/Products',[
             'products' => $products,
             'tab'      => $tab,
         ]);
@@ -33,10 +33,7 @@ class ProductController extends Controller
     public function create()
     {
         $categories = Category::with('characteristics')->get();
-
-        return Inertia::render('Admin/ProductForm', [
-            'categories' => $categories,
-        ]);
+        return Inertia::render('Admin/ProductForm', ['categories' => $categories]);
     }
 
     public function store(Request $request)
@@ -86,7 +83,7 @@ class ProductController extends Controller
         $product->load('characteristics');
         $categories = Category::with('characteristics')->get();
 
-        return Inertia::render('Admin/ProductForm', [
+        return Inertia::render('Admin/ProductForm',[
             'product'    => $product,
             'categories' => $categories,
         ]);
@@ -102,7 +99,6 @@ class ProductController extends Controller
             'discount'    => 'integer|min:0|max:100',
         ]);
 
-        // Запоминаем старые значения цены ДО обновления
         $oldPrice    = (float) $product->price;
         $oldDiscount = (int)   $product->discount;
         $newPrice    = (float) $request->price;
@@ -137,21 +133,46 @@ class ProductController extends Controller
             }
         }
 
-        // Если итоговая цена изменилась — уведомляем всех, у кого товар в корзине
+        // Логика расчета изменений в цене
         $oldFinal = $oldDiscount > 0 ? round($oldPrice * (1 - $oldDiscount / 100)) : $oldPrice;
         $newFinal = $newDiscount > 0 ? round($newPrice * (1 - $newDiscount / 100)) : $newPrice;
 
         if ($oldFinal !== $newFinal) {
-            $cartItems = Cart::where('product_id', $product->id)->get();
-            foreach ($cartItems as $cartItem) {
-                broadcast(new CartPriceChanged(
-                    $cartItem->user_id,
-                    $product,
-                    $oldPrice,
-                    $newPrice,
-                    $oldDiscount,
-                    $newDiscount,
-                ));
+            // Логика расчета изменений в цене
+            $oldFinal = $oldDiscount > 0 ? round($oldPrice * (1 - $oldDiscount / 100)) : $oldPrice;
+            $newFinal = $newDiscount > 0 ? round($newPrice * (1 - $newDiscount / 100)) : $newPrice;
+
+            if ($oldFinal !== $newFinal) {
+                $reason = '';
+                // Форматируем цены для красивого вывода (например, 60000 -> 60 000)
+                $fmtOld = number_format($oldPrice, 0, '', ' ');
+                $fmtNew = number_format($newPrice, 0, '', ' ');
+
+                if ($oldPrice != $newPrice && $oldDiscount != $newDiscount) {
+                    $reason = "Изменилась базовая цена (с $fmtOld на $fmtNew) и скидка (с {$oldDiscount}% на {$newDiscount}%)";
+                } elseif ($oldPrice != $newPrice) {
+                    $reason = "Изменилась базовая цена с $fmtOld на $fmtNew";
+                } elseif ($oldDiscount != $newDiscount) {
+                    $reason = "Изменилась скидка с {$oldDiscount}% на {$newDiscount}%";
+                }
+
+                // Помечаем в корзинах, что цена изменилась
+                Cart::where('product_id', $product->id)->update([
+                    'old_price' => $oldFinal,
+                    'price_change_reason' => $reason
+                ]);
+
+                $cartItems = Cart::where('product_id', $product->id)->get();
+                foreach ($cartItems as $cartItem) {
+                    broadcast(new CartPriceChanged(
+                        $cartItem->user_id,
+                        $product,
+                        $oldPrice,
+                        $newPrice,
+                        $oldDiscount,
+                        $newDiscount,
+                    ));
+                }
             }
         }
 

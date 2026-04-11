@@ -11,22 +11,31 @@ class OrderUpdated implements ShouldBroadcastNow
 {
     use Dispatchable;
 
-    public function __construct(public Order $order) {}
+    // Типы: status_change | new_message | contacts_updated | contacts_updated_by_admin | cancelled
+    public function __construct(
+        public Order $order,
+        public string $type = 'status_change'
+    ) {}
 
     public function broadcastOn(): array
     {
-        return[
-            // Уведомляем страницу самого заказа
+        return [
             new PrivateChannel('order.' . $this->order->id),
-            // Уведомляем клиента для его списка заказов
             new PrivateChannel('user.' . $this->order->user_id),
-            // Уведомляем админов для общего списка
-            new PrivateChannel('admin-notifications')
+            new PrivateChannel('admin-notifications'),
         ];
     }
 
     public function broadcastAs(): string
     {
         return 'OrderUpdated';
+    }
+
+    public function broadcastWith(): array
+    {
+        return [
+            'order' => $this->order->toArray(),
+            'type'  => $this->type,
+        ];
     }
 }

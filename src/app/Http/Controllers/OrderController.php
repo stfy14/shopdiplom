@@ -20,7 +20,7 @@ class OrderController extends Controller
         $items = Cart::with('product')->where('user_id', auth()->id())->get();
         if ($items->isEmpty()) return redirect()->route('home');
 
-        return Inertia::render('Shop/Checkout',[
+        return Inertia::render('Shop/Checkout', [
             'items' => $items,
             'total' => $items->sum(fn($i) => $i->product->price * $i->quantity),
         ]);
@@ -33,17 +33,17 @@ class OrderController extends Controller
             'street'  => 'required|string|max:255',
             'house'   => 'required|string|max:50',
             'comment' => 'nullable|string|max:1000',
-            'phone'   =>['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
+            'phone'   => ['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
         ]);
 
         $items = Cart::with('product')->where('user_id', auth()->id())->get();
         if ($items->isEmpty()) return redirect()->route('home');
-        
+
         $order = null;
         DB::transaction(function () use ($items, $data, &$order) {
             $total = $items->sum(fn($i) => $i->product->price_with_discount * $i->quantity);
 
-            $order = Order::create(array_merge($data,[
+            $order = Order::create(array_merge($data, [
                 'user_id'     => auth()->id(),
                 'total_price' => $total,
                 'status'      => 'new',
@@ -63,7 +63,7 @@ class OrderController extends Controller
         broadcast(new NewOrderPlaced($order));
         return redirect()->route('order.show', $order->uuid);
     }
-    
+
     public function show(string $uuid)
     {
         $order = Order::with(['items.product', 'messages'])
@@ -79,10 +79,10 @@ class OrderController extends Controller
         if ($order->user_id !== auth()->id() || $order->status !== 'new') abort(403);
 
         $order->update([
-            'status' => 'cancelled_by_user',
-            'has_unseen_activity' => true
+            'status'               => 'cancelled_by_user',
+            'has_unseen_activity'  => true,
         ]);
-        broadcast(new OrderUpdated($order));
+        broadcast(new OrderUpdated($order, 'cancelled'));
         return response()->json(['success' => true]);
     }
 
@@ -105,8 +105,10 @@ class OrderController extends Controller
 
         $order->update(['has_unseen_activity' => true]);
 
+        // NewOrderMessage вещает только на order.{id} (т.к. отправитель - user)
+        // Админ получит уведомление через OrderUpdated ниже
         broadcast(new NewOrderMessage($message));
-        broadcast(new OrderUpdated($order));
+        broadcast(new OrderUpdated($order, 'new_message'));
 
         return response()->json($message);
     }
@@ -120,12 +122,13 @@ class OrderController extends Controller
             'street'  => 'required|string|max:255',
             'house'   => 'required|string|max:50',
             'comment' => 'nullable|string|max:1000',
-            'phone'   =>['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
+            'phone'   => ['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
         ]);
 
         $order->update($validated);
-        $order->update(['has_unseen_activity' => true]); // Сначала флаг
-        broadcast(new OrderUpdated($order)); // Потом уведомление
+        $order->update(['has_unseen_activity' => true]);
+        // Тип contacts_updated — админ получит специфичный тост
+        broadcast(new OrderUpdated($order, 'contacts_updated'));
 
         return response()->json(['success' => true]);
     }

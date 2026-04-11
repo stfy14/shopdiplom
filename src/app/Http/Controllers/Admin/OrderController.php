@@ -18,18 +18,18 @@ class OrderController extends Controller
         $query = Order::with('user')->withCount('unreadMessages')->latest();
 
         if ($tab === 'archive') {
-            $query->whereIn('status',['cancelled', 'cancelled_by_user']);
+            $query->whereIn('status', ['cancelled', 'cancelled_by_user']);
         } else {
-            $query->whereNotIn('status',['cancelled', 'cancelled_by_user']);
+            $query->whereNotIn('status', ['cancelled', 'cancelled_by_user']);
         }
 
-        return inertia('Admin/Orders',['orders' => $query->get(), 'tab' => $tab]);
+        return inertia('Admin/Orders', ['orders' => $query->get(), 'tab' => $tab]);
     }
 
     public function show(Order $order)
     {
-        // Моментально гасим уведомления, если админ зашел в заказ
         $needsBroadcast = false;
+
         if ($order->has_unseen_activity) {
             $order->update(['has_unseen_activity' => false]);
             $needsBroadcast = true;
@@ -40,7 +40,7 @@ class OrderController extends Controller
         }
 
         if ($needsBroadcast) {
-            broadcast(new OrderUpdated($order)); // Сообщаем спискам, что все прочитано
+            broadcast(new OrderUpdated($order, 'read'));
         }
 
         $order->load(['user', 'items.product', 'messages']);
@@ -51,7 +51,7 @@ class OrderController extends Controller
     {
         $request->validate(['status' => 'required|in:new,processing,shipped,cancelled,cancelled_by_user']);
         $order->update(['status' => $request->status]);
-        broadcast(new OrderUpdated($order));
+        broadcast(new OrderUpdated($order, 'status_change'));
         return response()->json(['success' => true]);
     }
 
@@ -70,6 +70,7 @@ class OrderController extends Controller
             'message'     => $request->message,
         ]);
 
+        // NewOrderMessage вещает на order.{id} + user.{id} (т.к. отправитель - admin)
         broadcast(new NewOrderMessage($message));
         return response()->json($message);
     }
@@ -81,11 +82,12 @@ class OrderController extends Controller
             'street'  => 'required|string|max:255',
             'house'   => 'required|string|max:50',
             'comment' => 'nullable|string|max:1000',
-            'phone'   =>['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
+            'phone'   => ['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
         ]);
 
         $order->update($request->only(['city', 'street', 'house', 'comment', 'phone']));
-        broadcast(new OrderUpdated($order));
+        // Тип contacts_updated_by_admin — пользователь получит специфичный тост
+        broadcast(new OrderUpdated($order, 'contacts_updated_by_admin'));
         return response()->json(['success' => true]);
     }
 }

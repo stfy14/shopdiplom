@@ -1,7 +1,12 @@
 <script setup>
 import ShopLayout from '@/Layouts/ShopLayout.vue'
-import { Link, router } from '@inertiajs/vue3' // ДОБАВИТЬ router
-import { onMounted, onUnmounted } from 'vue'   // ДОБАВИТЬ хуки
+import { Link } from '@inertiajs/vue3'
+
+// Echo-слушатели УБРАНЫ отсюда.
+// ShopLayout слушает user.{id} и сам обновляет список заказов,
+// когда видит что мы на странице Shop/Profile.
+// Вызов window.Echo.leave('private-user.X') в onUnmounted убивал
+// подписку ShopLayout, из-за чего уведомления переставали работать.
 
 const props = defineProps({
     orders: Array,
@@ -23,28 +28,13 @@ function formatPrice(price) {
 function formatDate(dt) {
     return new Date(dt).toLocaleDateString('ru-RU')
 }
-
-onMounted(() => {
-    window.Echo.private(`user.${props.user.id}`)
-        .listen('.OrderUpdated', () => {
-            router.reload({ only:['orders'], preserveScroll: true, preserveState: true })
-        })
-})
-
-onUnmounted(() => {
-    window.Echo.leave(`private-user.${props.user.id}`)
-})
-
 </script>
 
 <template>
     <ShopLayout>
         <div class="max-w-3xl mx-auto">
-            <!-- Шапка профиля -->
             <div class="bg-white rounded-2xl shadow-sm p-6 mb-6 flex items-center gap-4">
-                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-2xl">
-                    👤
-                </div>
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-2xl">👤</div>
                 <div>
                     <div class="font-bold text-xl">{{ user.name }}</div>
                     <div class="text-gray-400 text-sm">{{ user.email }}</div>
@@ -53,25 +43,15 @@ onUnmounted(() => {
                     </span>
                 </div>
                 <div class="ml-auto flex gap-2">
-                    <Link
-                        v-if="user.role === 'admin'"
-                        href="/admin"
-                        class="px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-700 transition"
-                    >
+                    <Link v-if="user.role === 'admin'" href="/admin" class="px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-700 transition">
                         Панель управления
                     </Link>
-                    <Link
-                        href="/logout"
-                        method="post"
-                        as="button"
-                        class="px-4 py-2 border border-gray-200 text-gray-500 rounded-xl text-sm hover:bg-gray-50 transition"
-                    >
+                    <Link href="/logout" method="post" as="button" class="px-4 py-2 border border-gray-200 text-gray-500 rounded-xl text-sm hover:bg-gray-50 transition">
                         Выйти
                     </Link>
                 </div>
             </div>
 
-            <!-- Заказы -->
             <h2 class="font-bold text-lg mb-4">Мои заказы</h2>
 
             <div v-if="orders.length > 0" class="flex flex-col gap-3">
@@ -85,12 +65,9 @@ onUnmounted(() => {
                         <div class="font-bold">#{{ order.id }}</div>
                         <div class="text-gray-400 text-xs font-mono">{{ order.uuid.substring(0, 8) }}...</div>
                     </div>
-
                     <div class="flex-grow">
                         <div class="text-sm text-gray-500">{{ formatDate(order.created_at) }}</div>
-                        <div class="text-sm text-gray-500">{{ order.address }}</div>
                     </div>
-
                     <div class="text-right">
                         <div class="font-bold text-lg">{{ formatPrice(order.total_price) }} ₽</div>
                         <span :class="['text-xs px-2 py-1 rounded-full font-medium', statusMap[order.status]?.color]">

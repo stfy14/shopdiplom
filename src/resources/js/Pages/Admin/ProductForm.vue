@@ -40,11 +40,11 @@ watch(() => form.category_id, (newId) => {
 
 function submit() {
     if (isEdit) {
-        form.post(`/admin/products/${props.product.id}`, {
-            _method: 'put', // Inertia.js hack for file uploads with PUT method
-        });
+        // При наличии файлов PUT не работает напрямую — нужно POST + _method в теле формы
+        form.transform(data => ({ ...data, _method: 'put' }))
+            .post(`/admin/products/${props.product.id}`)
     } else {
-        form.post('/admin/products');
+        form.post('/admin/products')
     }
 }
 
@@ -77,52 +77,29 @@ function onImageChange(e) {
             <div class="grid grid-cols-3 gap-4 mb-5">
                 <div>
                     <label class="block text-sm font-medium text-gray-500 mb-1">Цена (₽)</label>
-                    <input
-                        v-model="form.price"
-                        type="number"
-                        class="w-full px-4 py-3 bg-gray-50 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
+                    <input v-model="form.price" type="number" class="w-full px-4 py-3 bg-gray-50 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-500 mb-1">Остаток (шт)</label>
-                    <input
-                        v-model="form.quantity"
-                        type="number"
-                        class="w-full px-4 py-3 bg-gray-50 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
+                    <input v-model="form.quantity" type="number" class="w-full px-4 py-3 bg-gray-50 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-500 mb-1">Скидка (%)</label>
-                    <input
-                        v-model="form.discount"
-                        type="number"
-                        min="0"
-                        max="100"
-                        class="w-full px-4 py-3 bg-gray-50 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
+                    <input v-model="form.discount" type="number" min="0" max="100" class="w-full px-4 py-3 bg-gray-50 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                 </div>
             </div>
 
             <div class="mb-5">
                 <label class="block text-sm font-medium text-gray-500 mb-1">Категория</label>
-                <select
-                    v-model="form.category_id"
-                    class="w-full px-4 py-3 bg-gray-50 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                >
+                <select v-model="form.category_id" class="w-full px-4 py-3 bg-gray-50 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                     <option value="" disabled>— Выберите категорию —</option>
-                    <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-                        {{ cat.name }}
-                    </option>
+                    <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                 </select>
             </div>
 
             <div class="mb-5">
                 <label class="block text-sm font-medium text-gray-500 mb-1">Описание</label>
-                <textarea
-                    v-model="form.description"
-                    rows="4"
-                    class="w-full px-4 py-3 bg-gray-50 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
-                />
+                <textarea v-model="form.description" rows="4" class="w-full px-4 py-3 bg-gray-50 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" />
             </div>
 
             <div v-if="selectedCategory?.characteristics?.length > 0" class="mb-5">
@@ -130,11 +107,7 @@ function onImageChange(e) {
                 <div class="grid grid-cols-2 gap-3">
                     <div v-for="char in selectedCategory.characteristics" :key="char.id">
                         <label class="block text-xs text-gray-400 mb-1">{{ char.name }}</label>
-                        <input
-                            v-model="form.characteristics[char.id]"
-                            type="text"
-                            class="w-full px-4 py-2.5 bg-gray-50 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
-                        />
+                        <input v-model="form.characteristics[char.id]" type="text" class="w-full px-4 py-2.5 bg-gray-50 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm" />
                     </div>
                 </div>
             </div>

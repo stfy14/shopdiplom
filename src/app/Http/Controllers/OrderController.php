@@ -104,7 +104,7 @@ class OrderController extends Controller
         return response()->json($order->messages()->oldest()->get());
     }
 
-    public function sendMessage(Order $order, Request $request)
+public function sendMessage(Order $order, Request $request)
     {
         if ($order->user_id !== auth()->id()) abort(403);
         $request->validate(['message' => 'required|string']);
@@ -115,12 +115,16 @@ class OrderController extends Controller
             'message'     => $request->message,
         ]);
 
-        // УВЕДОМЛЕНИЕ АДМИНУ О НОВОМ СООБЩЕНИИ
+        // УВЕДОМЛЕНИЕ АДМИНУ О НОВОМ СООБЩЕНИИ В БД
         \App\Models\User::where('role', 'admin')->get()->each(function($admin) use($order) {
-            $admin->notify(new AppNotification("Новое сообщение от клиента в заказе #{$order->id}", 'success', "/admin/orders/{$order->id}", 'message'));
+            $admin->notify(new \App\Notifications\AppNotification("Новое сообщение от клиента в заказе #{$order->id}", 'success', "/admin/orders/{$order->id}", 'message'));
         });
 
         broadcast(new NewOrderMessage($message));
+        
+        // --- ДОБАВИТЬ ВОТ ЭТУ СТРОКУ ---
+        broadcast(new OrderUpdated($order, 'new_message'));
+
         return response()->json($message);
     }
 

@@ -56,17 +56,22 @@ function removeNotification(id) {
 }
 
 function clearAllNotifications() {
-    // Удаляем элементы "Ступенькой" с задержкой 50мс
     const items = [...localNotifications.value]
-    items.forEach((notif, index) => {
+    
+    items.reverse().forEach((notif, index) => {
         setTimeout(() => {
             localNotifications.value = localNotifications.value.filter(n => n.id !== notif.id)
-        }, index * 50)
+        }, index * 200) // <-- Поставь 200мс или 250мс для очень плавного красивого каскада
     })
     
-    axios.delete('/notifications/all').then(() => {
-        router.reload({ only:['notifications', 'adminNotifications'] })
-    })
+    // Формула: кол-во элементов * 200мс интервала + 600мс на последнюю анимацию свайпа и схлопывания
+    const totalAnimationTime = (items.length * 200) + 600;
+
+    setTimeout(() => {
+        axios.delete('/notifications/all').then(() => {
+            router.reload({ only: ['notifications', 'adminNotifications'] })
+        })
+    }, totalAnimationTime)
 }
 
 // Теперь Toast вызывается напрямую без пуша в список, так как список обновляется сервером
@@ -235,8 +240,18 @@ watch(() => user.value, (newUser, oldUser) => {
 </template>
 
 <style scoped>
-.bell-drop-enter-active { transition: all 0.22s cubic-bezier(0.34, 1.4, 0.64, 1); }
-.bell-drop-leave-active { transition: all 0.15s ease-in; }
-.bell-drop-enter-from   { opacity: 0; transform: translateY(-10px) scale(0.96); }
-.bell-drop-leave-to     { opacity: 0; transform: translateY(-6px) scale(0.97); }
+.bell-drop-enter-active {
+    /* Анимация появления стала чуть быстрее и "пружинистее" */
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.bell-drop-leave-active {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Совмещаем translateX для центрирования с translateY для вылета сверху */
+.bell-drop-enter-from,
+.bell-drop-leave-to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px) scale(0.95);
+}
 </style>

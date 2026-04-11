@@ -4,7 +4,8 @@ import { router } from '@inertiajs/vue3'
 
 const toasts = ref([])
 const timers = {}
-const DURATION = 15000
+// Сократили время до 5 секунд
+const DURATION = 5000
 
 const iconPaths = {
     order:      'M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9',
@@ -52,28 +53,28 @@ defineExpose({ add })
                 :key="toast.id"
                 :class="[
                     'relative w-80 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden pointer-events-auto',
-                    toast.href ? 'cursor-pointer' : ''
+                    toast.href ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''
                 ]"
                 @click="navigate(toast)"
             >
-
-                <div class="flex items-start gap-3 px-4 pt-4 pb-3 pl-5">
-                    <!-- Иконка -->
+                <div class="flex items-start gap-3 px-5 py-4">
+                    
+                    <!-- Иконка как в панели уведомлений -->
                     <div :class="[
-                        'flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center mt-0.5',
-                        toast.type === 'error' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'
+                        'flex-shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm border mt-0.5',
+                        toast.type === 'error' ? 'bg-red-50 text-red-500 border-red-100' : 'bg-white text-blue-600 border-gray-100'
                     ]">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" :d="getIconPath(toast.icon, toast.type)" />
                         </svg>
                     </div>
 
-                    <!-- Текст -->
-                    <div class="flex-grow min-w-0 pr-5">
+                    <!-- Текст как в панели уведомлений -->
+                    <div class="flex-grow min-w-0 pt-0.5 pr-4">
                         <p class="text-sm font-bold text-gray-900 leading-snug">{{ toast.message }}</p>
-                        <p v-if="toast.href" class="mt-1.5 text-xs font-semibold text-blue-500 flex items-center gap-1 hover:text-blue-700 transition-colors">
-                            Нажмите, чтобы открыть
-                            <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <p v-if="toast.href" class="text-[11px] text-blue-500 font-bold mt-1.5 flex items-center gap-1 hover:text-blue-700 transition-colors uppercase tracking-wide">
+                            Перейти
+                            <svg class="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/>
                             </svg>
                         </p>
@@ -83,17 +84,14 @@ defineExpose({ add })
                 <!-- Кнопка закрытия -->
                 <button
                     @click.stop="remove(toast.id)"
-                    class="absolute top-3 right-3 w-6 h-6 rounded-lg flex items-center justify-center text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition"
+                    class="absolute top-3 right-3 w-7 h-7 rounded-xl flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 transition"
                 >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                 </button>
-
-                <!-- Прогресс-бар -->
-                <div :class="['h-0.5 w-full', toast.type === 'error' ? 'bg-red-100' : 'bg-green-100']">
-                    <div :class="['h-full origin-left', toast.type === 'error' ? 'bg-red-400' : 'bg-green-400', 'toast-bar']" />
-                </div>
+                
+                <!-- Прогресс-бар удален -->
             </div>
         </TransitionGroup>
     </div>
@@ -105,10 +103,4 @@ defineExpose({ add })
 .toast-enter-from   { opacity: 0; transform: translateX(110%) scale(0.9); }
 .toast-leave-to     { opacity: 0; transform: translateX(110%); }
 .toast-move         { transition: transform 0.3s ease; }
-
-@keyframes shrink {
-    from { transform: scaleX(1); }
-    to   { transform: scaleX(0); }
-}
-.toast-bar { animation: shrink 15s linear forwards; }
 </style>

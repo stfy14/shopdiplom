@@ -80,9 +80,13 @@ class OrderController extends Controller
             'message'     => $request->message,
         ]);
 
-        $order->user->notify(new AppNotification("Новый ответ от поддержки по заказу #{$order->id}", 'success', "/orders/{$order->uuid}", 'message'));
+        $order->user->notify(new \App\Notifications\AppNotification("Новый ответ от поддержки по заказу #{$order->id}", 'success', "/orders/{$order->uuid}", 'message'));
 
         broadcast(new NewOrderMessage($message));
+        
+        // ДОБАВЛЕНА ЭТА СТРОКА:
+        broadcast(new OrderUpdated($order, 'new_message'));
+
         return response()->json($message);
     }
 

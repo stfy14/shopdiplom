@@ -140,13 +140,19 @@ class ProductController extends Controller
 
         if ($oldFinal !== $newFinal) {
             $reason = '';
-            $fmtOld = number_format($oldPrice, 0, '', ' ');
-            $fmtNew = number_format($newPrice, 0, '', ' ');
+            
+            // Форматируем отдельно базовые цены (для комментария в корзине)
+            $fmtBaseOld = number_format($oldPrice, 0, '', ' ');
+            $fmtBaseNew = number_format($newPrice, 0, '', ' ');
+            
+            // Форматируем отдельно итоговые цены со скидкой (для самого уведомления)
+            $fmtFinalOld = number_format($oldFinal, 0, '', ' ');
+            $fmtFinalNew = number_format($newFinal, 0, '', ' ');
 
             if ($oldPrice != $newPrice && $oldDiscount != $newDiscount) {
-                $reason = "Изменилась базовая цена (с $fmtOld на $fmtNew) и скидка (с {$oldDiscount}% на {$newDiscount}%)";
+                $reason = "Изменилась базовая цена (с $fmtBaseOld на $fmtBaseNew) и скидка (с {$oldDiscount}% на {$newDiscount}%)";
             } elseif ($oldPrice != $newPrice) {
-                $reason = "Изменилась базовая цена с $fmtOld на $fmtNew";
+                $reason = "Изменилась базовая цена с $fmtBaseOld на $fmtBaseNew";
             } elseif ($oldDiscount != $newDiscount) {
                 $reason = "Изменилась скидка с {$oldDiscount}% на {$newDiscount}%";
             }
@@ -163,7 +169,7 @@ class ProductController extends Controller
                 $user = \App\Models\User::find($cartItem->user_id);
                 if ($user) {
                     $user->notify(new AppNotification(
-                        "«{$product->title}»: $fmtOld → $fmtNew ₽",
+                        "«{$product->title}»: $fmtFinalOld → $fmtFinalNew ₽",
                         $priceDown ? 'success' : 'error',
                         '/cart',
                         $priceDown ? 'price_down' : 'price_up'

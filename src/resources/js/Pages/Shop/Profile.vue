@@ -60,7 +60,7 @@ function formatDate(dt) {
                         v-for="order in orders"
                         :key="order.id"
                         :href="`/orders/${order.uuid}`"
-                        class="relative grid grid-cols-12 gap-4 items-center bg-white rounded-2xl shadow-sm p-4 transition-all hover:shadow-md hover:-translate-y-px border border-gray-100 group"
+                        class="relative grid grid-cols-12 gap-4 items-center bg-white rounded-2xl p-4 border border-gray-100 group shadow-sm transition duration-300 ease-out hover:shadow-md hover:-translate-y-1 will-change-transform antialiased"
                     >
                         <!-- Order # + date -->
                         <div class="col-span-2">

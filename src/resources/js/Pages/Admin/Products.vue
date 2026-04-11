@@ -76,7 +76,7 @@ function restoreProduct(id) {
             </div>
             
             <!-- ИЗМЕНЕНИЕ: Анимация теперь hover:-translate-y-1 -->
-            <div v-for="product in products" :key="product.id" class="grid grid-cols-12 gap-4 items-center bg-white rounded-2xl shadow-sm p-4 transition-all hover:shadow-md hover:-translate-y-1 border border-gray-100 group">
+            <div v-for="product in products" :key="product.id" class="grid grid-cols-12 gap-4 items-center bg-white rounded-2xl shadow-sm p-4 transition hover:shadow-md hover:-translate-y-px will-change-transform border border-gray-100 group">
                 <div class="col-span-1 text-gray-400 font-bold text-sm">#{{ product.id }}</div>
                 
                 <div class="col-span-5 flex items-center gap-4">

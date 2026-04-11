@@ -60,7 +60,7 @@ function deleteCategory(id) {
 
         <!-- Список -->
         <div class="flex flex-col gap-3">
-            <div v-for="cat in categories" :key="cat.id" class="grid grid-cols-12 gap-4 items-center bg-white rounded-2xl shadow-sm p-4 transition hover:shadow-md border border-gray-100">
+            <div v-for="cat in categories" :key="cat.id" class="grid grid-cols-12 gap-4 items-center bg-white rounded-2xl shadow-sm p-4 transition hover:shadow-md hover:-translate-y-px will-change-transform border border-gray-100">
                 <div class="col-span-1 text-gray-400 font-bold text-sm">#{{ cat.id }}</div>
                 
                 <div class="col-span-4 flex items-center gap-3">

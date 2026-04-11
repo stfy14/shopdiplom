@@ -8,8 +8,8 @@ const page = usePage()
 const toast = ref(null)
 
 provide('toast', {
-    success: (msg) => toast.value?.add(msg, 'success'),
-    error:   (msg) => toast.value?.add(msg, 'error'),
+    success: (msg, opts = {}) => toast.value?.add(msg, 'success', opts),
+    error:   (msg, opts = {}) => toast.value?.add(msg, 'error', opts),
 })
 
 watch(() => page.props.flash?.cart_added, (val) => {
@@ -50,7 +50,7 @@ watch(() => user.value, (newUser, oldUser) => {
 
             .listen('.NewOrderPlaced', (event) => {
                 if (event.order) {
-                    toast.value?.add(`📦 Новый заказ #${event.order.id} на ${fmt(event.order.total_price)} ₽`, 'success')
+                    toast.value?.add(`Новый заказ #${event.order.id} на ${fmt(event.order.total_price)} ₽`, 'success', { icon: 'order', href: `/admin/orders/${event.order.id}` })
                 }
                 const extra = currentPage.value === 'Admin/Orders' ? ['orders'] : []
                 router.reload({ only: ['adminNotifications', ...extra], preserveScroll: true, preserveState: true })
@@ -65,14 +65,14 @@ watch(() => user.value, (newUser, oldUser) => {
                 switch (event.type) {
                     case 'new_message':
                         if (!onThisOrder)
-                            toast.value?.add(`💬 Новое сообщение в заказе #${id}`, 'success')
+                            toast.value?.add(`Новое сообщение в заказе #${id}`, 'success', { icon: 'message', href: `/admin/orders/${id}` })
                         break
                     case 'contacts_updated':
                         if (!onThisOrder)
-                            toast.value?.add(`✏️ Клиент обновил контакты заказа #${id}`, 'success')
+                            toast.value?.add(`Клиент обновил контакты заказа #${id}`, 'success', { icon: 'edit', href: `/admin/orders/${id}` })
                         break
                     case 'cancelled':
-                        toast.value?.add(`❌ Заказ #${id} отменён клиентом`, 'error')
+                        toast.value?.add(`Заказ #${id} отменён клиентом`, 'error', { icon: 'cancel', href: `/admin/orders/${id}` })
                         break
                     // status_change, contacts_updated_by_admin, read — без тоста для админа
                 }
@@ -106,12 +106,12 @@ watch(() => user.value, (newUser, oldUser) => {
                     case 'status_change': {
                         const label = statusLabels[order.status] ?? order.status
                         if (!onThisOrder)
-                            toast.value?.add(`📦 Заказ #${order.id}: статус → «${label}»`, 'success')
+                            toast.value?.add(`Заказ #${order.id}: статус изменён на «${label}»`, 'success', { icon: 'status', href: `/orders/${order.uuid}` })
                         break
                     }
                     case 'contacts_updated_by_admin':
                         if (!onThisOrder)
-                            toast.value?.add(`✏️ Менеджер обновил контакты заказа #${order.id}`, 'success')
+                            toast.value?.add(`Менеджер обновил контакты заказа #${order.id}`, 'success', { icon: 'edit', href: `/orders/${order.uuid}` })
                         break
                     // new_message, contacts_updated, cancelled — пользователь сам инициировал
                 }
@@ -129,7 +129,7 @@ watch(() => user.value, (newUser, oldUser) => {
                 const onThisOrder = currentPage.value === 'Shop/Order' &&
                     window.location.pathname.includes(`/orders/${event.order_uuid}`)
                 if (!onThisOrder) {
-                    toast.value?.add(`💬 Новый ответ по заказу #${event.order_number}`, 'success')
+                    toast.value?.add(`Новый ответ по заказу #${event.order_number}`, 'success', { icon: 'message', href: `/orders/${event.order_uuid}` })
                 }
             })
 
@@ -137,9 +137,9 @@ watch(() => user.value, (newUser, oldUser) => {
             .listen('.CartPriceChanged', (event) => {
                 const was  = fmt(event.old_price)
                 const now  = fmt(event.new_price)
-                const icon = event.new_price < event.old_price ? '📉' : '📈'
-                const type = event.new_price < event.old_price ? 'success' : 'error'
-                toast.value?.add(`${icon} «${event.product_title}»: ${was} → ${now} ₽`, type)
+                const priceDown = event.new_price < event.old_price
+                const type = priceDown ? 'success' : 'error'
+                toast.value?.add(`«${event.product_title}»: ${was} → ${now} ₽`, type, { icon: priceDown ? 'price_down' : 'price_up', href: '/cart' })
                 router.reload({ only: ['cartItems', 'cartCount'], preserveScroll: true, preserveState: true })
             })
     }

@@ -15,12 +15,19 @@ function clearNotification(productId) { router.patch(`/cart/${productId}/clear-n
 </script>
 
 <template>
-    <Transition name="popup">
-        <div v-if="show" class="fixed inset-0 z-50 flex justify-end">
-            <!-- ИСПРАВЛЕНИЕ: Плавная анимация для backdrop-blur -->
-            <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity duration-300" @click="emit('close')" />
-            
-            <div class="relative w-full max-w-sm bg-gray-50 h-full shadow-2xl flex flex-col">
+    <Teleport to="body">
+        <!-- Backdrop: отдельный transition, только opacity -->
+        <Transition name="backdrop-fade">
+            <div
+                v-if="show"
+                class="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm"
+                @click="emit('close')"
+            />
+        </Transition>
+
+        <!-- Панель: отдельный transition, только slide -->
+        <Transition name="panel-slide">
+            <div v-if="show" class="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-gray-50 shadow-2xl flex flex-col">
                 <div class="p-5 border-b border-gray-200 flex items-center justify-between bg-white/80 backdrop-blur-sm sticky top-0 z-10">
                     <h2 class="font-black text-xl text-gray-900 flex items-center gap-3">
                         <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
@@ -33,7 +40,7 @@ function clearNotification(productId) { router.patch(`/cart/${productId}/clear-n
 
                 <div class="flex-grow overflow-y-auto p-4">
                     <div v-if="normalizedItems.length === 0" class="flex flex-col items-center justify-center h-full text-gray-400">
-                        <svg class="w-24 h-24 text-gray-300 mb-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c.51 0 .962-.343 1.087-.835l1.823-6.44a1.125 1.125 0 00-.44-1.229l-5.432-4.075a1.125 1.125 0 00-1.518.056L5.64 5.39a1.125 1.125 0 00-.056 1.518l3.65 4.563M7.5 14.25L5.106 5.106M17.25 20.25a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zM7.5 20.25a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg>
+                        <svg class="w-24 h-24 text-gray-300 mb-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c.51 0 .962-.343 1.087-.835l1.823-6.44a1.125 1.125 0 00-.44-1.229l-5.432-4.075a1.125 1.125 0 00-1.518.056L5.64 5.39a1.125 1.125 0 00-.056 1.518l3.65 4.563M7.5 14.25L5.106 5.106M17.25 20.25a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zM7.5 20.25a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014 0z"/></svg>
                         <div class="font-bold text-lg">Корзина пуста</div>
                         <div class="text-sm text-gray-500 mt-1">Добавьте товары из каталога</div>
                     </div>
@@ -41,8 +48,8 @@ function clearNotification(productId) { router.patch(`/cart/${productId}/clear-n
                     <div v-else class="flex flex-col gap-3">
                         <div v-for="item in normalizedItems" :key="item.id" class="flex flex-col gap-2 p-2.5 rounded-2xl transition-all bg-white shadow-sm border border-gray-200 hover:border-gray-300 hover:shadow-md">
                             
-                            <!-- ИСПРАВЛЕНИЕ: Добавили Transition для плавной анимации уведомления -->
-                            <Transition name="fade">
+                            <!-- Уведомление об изменении цены — только opacity, без своего transform -->
+                            <Transition name="price-fade">
                                 <div v-if="item.old_price" class="bg-yellow-50 shadow-sm p-3 rounded-xl text-xs relative mb-1 border border-yellow-100">
                                     <strong class="text-yellow-800 block mb-1 text-[13px] flex items-center gap-1.5">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
@@ -86,17 +93,26 @@ function clearNotification(productId) { router.patch(`/cart/${productId}/clear-n
                     <Link href="/cart" @click="emit('close')" class="block w-full py-2.5 text-center text-gray-600 hover:text-gray-900 font-bold text-sm transition bg-gray-100 rounded-xl hover:bg-gray-200">Перейти в корзину</Link>
                 </div>
             </div>
-        </div>
-    </Transition>
+        </Transition>
+    </Teleport>
 </template>
 
 <style scoped>
-.popup-enter-active, .popup-leave-active { transition: opacity 0.3s ease; }
-.popup-enter-active .relative, .popup-leave-active .relative { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-.popup-enter-from, .popup-leave-to { opacity: 0; }
-.popup-enter-from .relative { transform: translateX(100%); }
-.popup-leave-to .relative { transform: translateX(100%); }
+/* Backdrop: плавный fade */
+.backdrop-fade-enter-active,
+.backdrop-fade-leave-active { transition: opacity 0.3s ease; }
+.backdrop-fade-enter-from,
+.backdrop-fade-leave-to { opacity: 0; }
 
-.fade-enter-active, .fade-leave-active { transition: all 0.3s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-10px); }
+/* Панель: только slide, без opacity — blur анимирует backdrop отдельно */
+.panel-slide-enter-active,
+.panel-slide-leave-active { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.panel-slide-enter-from,
+.panel-slide-leave-to { transform: translateX(100%); }
+
+/* Уведомление о цене: только opacity, без transform — едет вместе с карточкой */
+.price-fade-enter-active,
+.price-fade-leave-active { transition: opacity 0.3s ease; }
+.price-fade-enter-from,
+.price-fade-leave-to { opacity: 0; }
 </style>

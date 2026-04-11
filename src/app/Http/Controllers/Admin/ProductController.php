@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Events\CartPriceChanged;
 use App\Events\ProductUpdated;
 use App\Models\ProductCharacteristic;
+use App\Notifications\AppNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -33,7 +34,7 @@ class ProductController extends Controller
     public function create()
     {
         $categories = Category::with('characteristics')->get();
-        return Inertia::render('Admin/ProductForm', ['categories' => $categories]);
+        return Inertia::render('Admin/ProductForm',['categories' => $categories]);
     }
 
     public function store(Request $request)
@@ -138,11 +139,6 @@ class ProductController extends Controller
         $newFinal = $newDiscount > 0 ? round($newPrice * (1 - $newDiscount / 100)) : $newPrice;
 
         if ($oldFinal !== $newFinal) {
-            // Логика расчета изменений в цене
-            $oldFinal = $oldDiscount > 0 ? round($oldPrice * (1 - $oldDiscount / 100)) : $oldPrice;
-            $newFinal = $newDiscount > 0 ? round($newPrice * (1 - $newDiscount / 100)) : $newPrice;
-
-        if ($oldFinal !== $newFinal) {
             $reason = '';
             $fmtOld = number_format($oldPrice, 0, '', ' ');
             $fmtNew = number_format($newPrice, 0, '', ' ');
@@ -166,7 +162,7 @@ class ProductController extends Controller
             foreach ($cartItems as $cartItem) {
                 $user = \App\Models\User::find($cartItem->user_id);
                 if ($user) {
-                    $user->notify(new \App\Notifications\AppNotification(
+                    $user->notify(new AppNotification(
                         "«{$product->title}»: $fmtOld → $fmtNew ₽",
                         $priceDown ? 'success' : 'error',
                         '/cart',
@@ -186,6 +182,7 @@ class ProductController extends Controller
         }
 
         broadcast(new ProductUpdated());
+
         return redirect()->route('admin.products');
     }
 

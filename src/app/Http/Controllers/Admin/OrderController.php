@@ -50,7 +50,10 @@ class OrderController extends Controller
     public function updateStatus(Order $order, Request $request)
     {
         $request->validate(['status' => 'required|in:new,processing,shipped,cancelled,cancelled_by_user']);
-        $order->update(['status' => $request->status]);
+        $order->update([
+            'status'                        => $request->status,
+            'user_has_unseen_status_change' => true,
+        ]);
         broadcast(new OrderUpdated($order, 'status_change'));
         return response()->json(['success' => true]);
     }
@@ -70,7 +73,6 @@ class OrderController extends Controller
             'message'     => $request->message,
         ]);
 
-        // NewOrderMessage вещает на order.{id} + user.{id} (т.к. отправитель - admin)
         broadcast(new NewOrderMessage($message));
         return response()->json($message);
     }
@@ -85,8 +87,11 @@ class OrderController extends Controller
             'phone'   => ['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
         ]);
 
-        $order->update($request->only(['city', 'street', 'house', 'comment', 'phone']));
-        // Тип contacts_updated_by_admin — пользователь получит специфичный тост
+        $order->update(array_merge(
+            $request->only(['city', 'street', 'house', 'comment', 'phone']),
+            ['user_has_unseen_contact_update' => true]
+        ));
+
         broadcast(new OrderUpdated($order, 'contacts_updated_by_admin'));
         return response()->json(['success' => true]);
     }

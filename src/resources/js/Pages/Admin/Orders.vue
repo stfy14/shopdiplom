@@ -91,17 +91,50 @@ function formatDate(dt) { return new Date(dt).toLocaleDateString('ru-RU', { day:
                         {{ statusMap[order.status]?.label }}
                     </span>
                 </div>
+
+                <!--
+                    3 independent notification icons for admin — all show simultaneously.
+
+                    1. Blue  clock  — new order awaiting action
+                    2. Yellow chat  — unread message from user (tracked via is_read on messages)
+                    3. Purple pen   — user updated contact info (tracked via has_unseen_activity,
+                                      which is now set ONLY in updateContacts, not in sendMessage)
+                -->
                 <div class="absolute -top-1.5 -right-1.5 flex items-center gap-1.5">
-                    <div v-if="order.status === 'new'" class="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md text-sm border-2 border-white" title="Новый заказ">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <!-- 1. Новый заказ -->
+                    <div
+                        v-if="order.status === 'new'"
+                        class="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md border-2 border-white"
+                        title="Новый заказ"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
                     </div>
-                    <div v-if="order.unread_messages_count > 0" class="w-7 h-7 rounded-full bg-yellow-400 text-yellow-900 flex items-center justify-center shadow-md text-sm border-2 border-white" title="Новое сообщение">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+
+                    <!-- 2. Непрочитанное сообщение от пользователя -->
+                    <div
+                        v-if="order.unread_messages_count > 0"
+                        class="w-7 h-7 rounded-full bg-yellow-400 text-yellow-900 flex items-center justify-center shadow-md border-2 border-white"
+                        title="Новое сообщение от клиента"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
                     </div>
-                    <div v-if="order.has_unseen_activity && order.status !== 'new'" class="w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md text-sm border-2 border-white" title="Клиент обновил данные">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+
+                    <!-- 3. Клиент обновил контактные данные -->
+                    <div
+                        v-if="order.has_unseen_activity"
+                        class="w-7 h-7 rounded-full bg-purple-500 text-white flex items-center justify-center shadow-md border-2 border-white"
+                        title="Клиент обновил контактные данные"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                        </svg>
                     </div>
                 </div>
+
                 <div @click.stop class="absolute top-1/2 -translate-y-1/2 right-5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Link :href="`/admin/orders/${order.id}`" class="px-4 py-2 border rounded-xl text-xs font-bold text-gray-600 hover:text-gray-900 transition bg-white/50 backdrop-blur-sm shadow-sm hover:shadow-md">
                         Открыть

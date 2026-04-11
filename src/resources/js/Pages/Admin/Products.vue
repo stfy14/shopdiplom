@@ -62,11 +62,12 @@ function restoreProduct(id) {
             </div>
         </div>
 
+        <!-- Наличие и Цена поменяны местами -->
         <div class="grid grid-cols-12 gap-4 px-5 text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
             <div class="col-span-1">ID</div>
             <div class="col-span-5">Товар</div>
-            <div class="col-span-2">Цена</div>
             <div class="col-span-2">Наличие</div>
+            <div class="col-span-2">Цена</div>
             <div class="col-span-2 text-right">Действия</div>
         </div>
 
@@ -75,7 +76,6 @@ function restoreProduct(id) {
                 Список пуст
             </div>
             
-            <!-- ИЗМЕНЕНИЕ: Анимация теперь hover:-translate-y-1 -->
             <div v-for="product in products" :key="product.id" class="grid grid-cols-12 gap-4 items-center bg-white rounded-2xl shadow-sm p-4 transition hover:shadow-md hover:-translate-y-px will-change-transform border border-gray-100 group">
                 <div class="col-span-1 text-gray-400 font-bold text-sm">#{{ product.id }}</div>
                 
@@ -89,15 +89,17 @@ function restoreProduct(id) {
                     </div>
                 </div>
 
-                <div class="col-span-2">
-                    <div class="font-black text-gray-900">{{ formatPrice(product.price_with_discount ?? product.price) }} ₽</div>
-                    <div v-if="product.discount > 0" class="text-[11px] font-bold text-red-500">-{{ product.discount }}% скидка</div>
-                </div>
-
+                <!-- Наличие теперь перед Ценой -->
                 <div class="col-span-2">
                     <span :class="['px-2.5 py-1 rounded-lg text-xs font-bold border', product.quantity === 0 ? 'bg-red-50 border-red-100 text-red-600' : product.quantity < 5 ? 'bg-yellow-50 border-yellow-100 text-yellow-700' : 'bg-green-50 border-green-100 text-green-700']">
                         {{ product.quantity }} шт.
                     </span>
+                </div>
+
+                <!-- Цена теперь после Наличия -->
+                <div class="col-span-2">
+                    <div class="font-black text-gray-900">{{ formatPrice(product.price_with_discount ?? product.price) }} ₽</div>
+                    <div v-if="product.discount > 0" class="text-[11px] font-bold text-red-500">-{{ product.discount }}% скидка</div>
                 </div>
 
                 <div class="col-span-2 flex justify-end gap-2">

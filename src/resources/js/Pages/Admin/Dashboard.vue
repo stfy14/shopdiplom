@@ -42,13 +42,13 @@ const statusMap = {
         </div>
 
         <h2 class="text-xl font-black mb-4 text-gray-900">Последние заказы</h2>
-        
-        <!-- Изменили ширину колонок: Клиент (4), Сумма (2 - уменьшили), Статус (4) -->
-        <div class="grid grid-cols-12 gap-4 px-5 text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
+
+        <!-- Заголовок — только md+ -->
+        <div class="hidden md:grid grid-cols-12 gap-4 px-5 text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
             <div class="col-span-2">Заказ</div>
-            <div class="col-span-4">Клиент</div>
+            <div class="col-span-5">Клиент</div>
+            <div class="col-span-3 text-center">Статус</div>
             <div class="col-span-2">Сумма</div>
-            <div class="col-span-4">Статус</div>
         </div>
 
         <div class="flex flex-col gap-3">
@@ -56,28 +56,38 @@ const statusMap = {
                 Пока нет ни одного заказа
             </div>
             
-            <!-- Применили фикс анимации (transition duration-300 ease-out hover:-translate-y-1 will-change-transform antialiased) -->
             <Link
                 v-for="order in recentOrders"
                 :key="order.id"
                 :href="`/admin/orders/${order.id}`"
-                class="relative grid grid-cols-12 gap-4 items-center bg-white rounded-2xl shadow-sm p-4 transition duration-300 ease-out hover:shadow-md hover:-translate-y-1 will-change-transform antialiased border border-gray-100 group"
+                class="relative bg-white rounded-2xl shadow-sm border border-gray-100 group
+                       transition duration-300 ease-out hover:shadow-md hover:-translate-y-1 will-change-transform antialiased
+                       p-4 flex flex-col gap-2
+                       md:grid md:grid-cols-12 md:gap-4 md:items-center md:flex-none"
             >
-                <div class="col-span-2">
-                    <div class="font-black text-gray-900">#{{ order.id }}</div>
-                    <div class="text-xs text-gray-400 mt-0.5">{{ formatDate(order.created_at) }}</div>
+                <!-- Заказ + сумма в одну строку на мобильном -->
+                <div class="md:col-span-2 flex items-start justify-between md:block">
+                    <div>
+                        <div class="font-black text-gray-900">#{{ order.id }}</div>
+                        <div class="text-xs text-gray-400 mt-0.5">{{ formatDate(order.created_at) }}</div>
+                    </div>
+                    <div class="md:hidden font-black text-gray-900 text-sm">{{ formatPrice(order.total_price) }} ₽</div>
                 </div>
-                <div class="col-span-4 font-bold text-gray-900 truncate">{{ order.user?.name }}</div>
-                
-                <!-- whitespace-nowrap защитит цену от переноса на новую строку, если цифра будет очень большой -->
-                <div class="col-span-2 font-black text-gray-900 whitespace-nowrap">{{ formatPrice(order.total_price) }} ₽</div>
-                
-                <div class="col-span-4">
-                     <span :class="['px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap', statusMap[order.status]?.color]">
+
+                <!-- Клиент -->
+                <div class="md:col-span-5 font-bold text-gray-900 truncate">{{ order.user?.name }}</div>
+
+                <!-- Статус -->
+                <div class="md:col-span-3 md:flex md:justify-center">
+                    <span :class="['inline-flex px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap', statusMap[order.status]?.color]">
                         {{ statusMap[order.status]?.label }}
                     </span>
                 </div>
-                <!-- КНОПКА "ОТКРЫТЬ" ПОЛНОСТЬЮ УДАЛЕНА -->
+
+                <!-- Сумма — только md+ -->
+                <div class="hidden md:block md:col-span-2 font-black text-gray-900 whitespace-nowrap">
+                    {{ formatPrice(order.total_price) }} ₽
+                </div>
             </Link>
         </div>
     </div>

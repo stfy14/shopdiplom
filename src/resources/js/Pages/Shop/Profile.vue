@@ -7,10 +7,6 @@ const props = defineProps({
     user: Object,
 })
 
-// WebSocket is handled by ShopLayout which already reloads only['orders']
-// when on Shop/Profile for OrderUpdated and NewOrderMessage events.
-// No duplicate listeners needed here.
-
 const statusMap = {
     new:               { label: 'Ждём подтверждения', color: 'bg-blue-100 text-blue-700' },
     processing:        { label: 'В обработке',        color: 'bg-yellow-100 text-yellow-700' },
@@ -48,44 +44,52 @@ function formatDate(dt) {
             <h2 class="font-bold text-xl mb-4 text-gray-800">Мои заказы</h2>
 
             <div v-if="orders.length > 0">
-                <div class="grid grid-cols-12 gap-4 px-5 text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
+                <!-- Заголовок — только md+ -->
+                <div class="hidden md:grid grid-cols-12 gap-4 px-5 text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
                     <div class="col-span-2">Заказ</div>
-                    <div class="col-span-4">Контакты</div>
-                    <div class="col-span-3">Сумма</div>
-                    <div class="col-span-3">Статус</div>
+                    <div class="col-span-5">Контакты</div>
+                    <div class="col-span-3 text-center">Статус</div>
+                    <div class="col-span-2">Сумма</div>
                 </div>
 
                 <div class="flex flex-col gap-3">
-                    <!-- Применили все фиксы анимации и убрали кнопку -->
                     <Link
                         v-for="order in orders"
                         :key="order.id"
                         :href="`/orders/${order.uuid}`"
-                        class="relative grid grid-cols-12 gap-4 items-center bg-white rounded-2xl p-4 border border-gray-100 group shadow-sm transition duration-300 ease-out hover:shadow-md hover:-translate-y-1 will-change-transform antialiased"
+                        class="relative bg-white rounded-2xl border border-gray-100 group shadow-sm
+                               transition duration-300 ease-out hover:shadow-md hover:-translate-y-1 will-change-transform antialiased
+                               p-4 flex flex-col gap-2
+                               md:grid md:grid-cols-12 md:gap-4 md:items-center md:flex-none"
                     >
-                        <!-- Order # + date -->
-                        <div class="col-span-2">
-                            <div class="font-black text-gray-900">#{{ order.id }}</div>
-                            <div class="text-xs text-gray-400 mt-1">{{ formatDate(order.created_at) }}</div>
+                        <!-- Заказ + сумма на мобильном -->
+                        <div class="md:col-span-2 flex items-start justify-between md:block">
+                            <div>
+                                <div class="font-black text-gray-900">#{{ order.id }}</div>
+                                <div class="text-xs text-gray-400 mt-1">{{ formatDate(order.created_at) }}</div>
+                            </div>
+                            <div class="md:hidden font-black text-gray-900 text-sm">{{ formatPrice(order.total_price) }} ₽</div>
                         </div>
 
-                        <!-- Contacts -->
-                        <div class="col-span-4">
+                        <!-- Контакты -->
+                        <div class="md:col-span-5">
                             <div class="text-sm font-bold text-gray-800">{{ order.phone }}</div>
                             <div class="text-xs text-gray-500 truncate">г. {{ order.city }}, ул. {{ order.street }}, {{ order.house }}</div>
                         </div>
 
-                        <!-- Total -->
-                        <div class="col-span-3 font-black text-gray-900 whitespace-nowrap">{{ formatPrice(order.total_price) }} ₽</div>
-
-                        <!-- Status badge -->
-                        <div class="col-span-3">
-                            <span :class="['px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap', statusMap[order.status]?.color]">
+                        <!-- Статус -->
+                        <div class="md:col-span-3 md:flex md:justify-center">
+                            <span :class="['inline-flex px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap', statusMap[order.status]?.color]">
                                 {{ statusMap[order.status]?.label }}
                             </span>
                         </div>
 
-                        <!-- Иконки уведомлений остаются на месте -->
+                        <!-- Сумма — только md+ -->
+                        <div class="hidden md:block md:col-span-2 font-black text-gray-900 whitespace-nowrap">
+                            {{ formatPrice(order.total_price) }} ₽
+                        </div>
+
+                        <!-- Иконки уведомлений -->
                         <div class="absolute -top-1.5 -right-1.5 flex items-center gap-1.5">
                             <div v-if="order.status === 'new'" class="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md border-2 border-white" title="Ждём подтверждения заказа">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -100,8 +104,6 @@ function formatDate(dt) {
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                             </div>
                         </div>
-
-                        <!-- Блок с кнопкой "Открыть" полностью удалён -->
                     </Link>
                 </div>
             </div>

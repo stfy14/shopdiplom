@@ -56,8 +56,6 @@ defineExpose({ add })
                 ]"
                 @click="navigate(toast)"
             >
-                <!-- Левый акцент -->
-                <div :class="['absolute left-0 top-0 bottom-0 w-1', toast.type === 'error' ? 'bg-red-500' : 'bg-green-500']" />
 
                 <div class="flex items-start gap-3 px-4 pt-4 pb-3 pl-5">
                     <!-- Иконка -->

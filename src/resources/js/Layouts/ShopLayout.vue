@@ -3,13 +3,45 @@ import { Link, usePage, router } from '@inertiajs/vue3'
 import { computed, ref, watch, provide } from 'vue'
 import CartPopup from '@/Components/CartPopup.vue'
 import Toast from '@/Components/Toast.vue'
+import NotificationCenter from '@/Components/NotificationCenter.vue'
 
 const page = usePage()
 const toast = ref(null)
+const notifications = ref([])
+const bellOpen = ref(false)
+const unreadCount = computed(() => notifications.value.filter(n => !n.read).length)
+
+let _notifId = 0
+function notify(message, type = 'success', opts = {}) {
+    notifications.value.unshift({
+        id: ++_notifId,
+        message,
+        type,
+        href: opts.href ?? null,
+        icon: opts.icon ?? null,
+        read: false,
+        createdAt: new Date(),
+    })
+    if (notifications.value.length > 50) notifications.value.length = 50
+    toast.value?.add(message, type, opts)
+}
+
+function openBell() {
+    bellOpen.value = true
+    notifications.value.forEach(n => { n.read = true })
+}
+
+function removeNotification(id) {
+    notifications.value = notifications.value.filter(n => n.id !== id)
+}
+
+function clearAllNotifications() {
+    notifications.value = []
+}
 
 provide('toast', {
-    success: (msg, opts = {}) => toast.value?.add(msg, 'success', opts),
-    error:   (msg, opts = {}) => toast.value?.add(msg, 'error', opts),
+    success: (msg, opts = {}) => notify(msg, 'success', opts),
+    error:   (msg, opts = {}) => notify(msg, 'error', opts),
 })
 
 watch(() => page.props.flash?.cart_added, (val) => {
@@ -50,7 +82,7 @@ watch(() => user.value, (newUser, oldUser) => {
 
             .listen('.NewOrderPlaced', (event) => {
                 if (event.order) {
-                    toast.value?.add(`Новый заказ #${event.order.id} на ${fmt(event.order.total_price)} ₽`, 'success', { icon: 'order', href: `/admin/orders/${event.order.id}` })
+                    notify(`Новый заказ #${event.order.id} на ${fmt(event.order.total_price)} ₽`, 'success', { icon: 'order', href: `/admin/orders/${event.order.id}` })
                 }
                 const extra = currentPage.value === 'Admin/Orders' ? ['orders'] : []
                 router.reload({ only: ['adminNotifications', ...extra], preserveScroll: true, preserveState: true })
@@ -65,14 +97,14 @@ watch(() => user.value, (newUser, oldUser) => {
                 switch (event.type) {
                     case 'new_message':
                         if (!onThisOrder)
-                            toast.value?.add(`Новое сообщение в заказе #${id}`, 'success', { icon: 'message', href: `/admin/orders/${id}` })
+                            notify(`Новое сообщение в заказе #${id}`, 'success', { icon: 'message', href: `/admin/orders/${id}` })
                         break
                     case 'contacts_updated':
                         if (!onThisOrder)
-                            toast.value?.add(`Клиент обновил контакты заказа #${id}`, 'success', { icon: 'edit', href: `/admin/orders/${id}` })
+                            notify(`Клиент обновил контакты заказа #${id}`, 'success', { icon: 'edit', href: `/admin/orders/${id}` })
                         break
                     case 'cancelled':
-                        toast.value?.add(`Заказ #${id} отменён клиентом`, 'error', { icon: 'cancel', href: `/admin/orders/${id}` })
+                        notify(`Заказ #${id} отменён клиентом`, 'error', { icon: 'cancel', href: `/admin/orders/${id}` })
                         break
                     // status_change, contacts_updated_by_admin, read — без тоста для админа
                 }
@@ -106,12 +138,12 @@ watch(() => user.value, (newUser, oldUser) => {
                     case 'status_change': {
                         const label = statusLabels[order.status] ?? order.status
                         if (!onThisOrder)
-                            toast.value?.add(`Заказ #${order.id}: статус изменён на «${label}»`, 'success', { icon: 'status', href: `/orders/${order.uuid}` })
+                            notify(`Заказ #${order.id}: статус изменён на «${label}»`, 'success', { icon: 'status', href: `/orders/${order.uuid}` })
                         break
                     }
                     case 'contacts_updated_by_admin':
                         if (!onThisOrder)
-                            toast.value?.add(`Менеджер обновил контакты заказа #${order.id}`, 'success', { icon: 'edit', href: `/orders/${order.uuid}` })
+                            notify(`Менеджер обновил контакты заказа #${order.id}`, 'success', { icon: 'edit', href: `/orders/${order.uuid}` })
                         break
                     // new_message, contacts_updated, cancelled — пользователь сам инициировал
                 }
@@ -129,7 +161,7 @@ watch(() => user.value, (newUser, oldUser) => {
                 const onThisOrder = currentPage.value === 'Shop/Order' &&
                     window.location.pathname.includes(`/orders/${event.order_uuid}`)
                 if (!onThisOrder) {
-                    toast.value?.add(`Новый ответ по заказу #${event.order_number}`, 'success', { icon: 'message', href: `/orders/${event.order_uuid}` })
+                    notify(`Новый ответ по заказу #${event.order_number}`, 'success', { icon: 'message', href: `/orders/${event.order_uuid}` })
                 }
             })
 
@@ -139,7 +171,7 @@ watch(() => user.value, (newUser, oldUser) => {
                 const now  = fmt(event.new_price)
                 const priceDown = event.new_price < event.old_price
                 const type = priceDown ? 'success' : 'error'
-                toast.value?.add(`«${event.product_title}»: ${was} → ${now} ₽`, type, { icon: priceDown ? 'price_down' : 'price_up', href: '/cart' })
+                notify(`«${event.product_title}»: ${was} → ${now} ₽`, type, { icon: priceDown ? 'price_down' : 'price_up', href: '/cart' })
                 router.reload({ only: ['cartItems', 'cartCount'], preserveScroll: true, preserveState: true })
             })
     }
@@ -173,6 +205,36 @@ watch(() => user.value, (newUser, oldUser) => {
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                             <span v-if="cartCount > 0" class="absolute -top-1 -right-1 bg-red-500 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm border-2 border-white">{{ cartCount }}</span>
                         </button>
+                        <!-- Колокольчик -->
+                        <div v-if="user" class="relative">
+                            <button
+                                @click="bellOpen ? bellOpen = false : openBell()"
+                                class="relative flex items-center justify-center w-11 h-11 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/>
+                                </svg>
+                                <span
+                                    v-if="unreadCount > 0"
+                                    class="absolute -top-1 -right-1 bg-blue-500 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm border-2 border-white"
+                                >
+                                    {{ unreadCount > 9 ? '9+' : unreadCount }}
+                                </span>
+                            </button>
+                    
+                            <!-- Оверлей для закрытия по клику вне -->
+                            <div v-if="bellOpen" class="fixed inset-0 z-40" @click="bellOpen = false" />
+                        
+                            <!-- Дропдаун -->
+                            <Transition name="bell-drop">
+                                <NotificationCenter
+                                    v-if="bellOpen"
+                                    :notifications="notifications"
+                                    @remove="removeNotification"
+                                    @remove-all="clearAllNotifications"
+                                />
+                            </Transition>
+                        </div>
                         <template v-if="user">
                             <Link v-if="user.role === 'admin'" href="/admin" class="hidden sm:flex px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition shadow-sm">Админка</Link>
                             <Link href="/profile" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 text-sm font-bold hover:bg-blue-100 transition">
@@ -203,3 +265,10 @@ watch(() => user.value, (newUser, oldUser) => {
         <Toast ref="toast" />
     </div>
 </template>
+
+<style scoped>
+.bell-drop-enter-active { transition: all 0.22s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.bell-drop-leave-active { transition: all 0.15s ease-in; }
+.bell-drop-enter-from   { opacity: 0; transform: translateY(-10px) scale(0.96); }
+.bell-drop-leave-to     { opacity: 0; transform: translateY(-6px) scale(0.97); }
+</style>

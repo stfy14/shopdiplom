@@ -92,21 +92,26 @@ function deleteChar(id) {
              <div v-if="!currentCategory?.characteristics?.length" class="text-center py-16 text-gray-400 bg-white rounded-3xl border border-gray-100 shadow-sm">
                 Характеристик для этой категории нет
             </div>
-            <div v-for="char in currentCategory?.characteristics" :key="char.id" class="flex flex-col gap-3 p-4 md:grid md:grid-cols-12 md:gap-4 md:items-center bg-white rounded-2xl shadow-sm transition hover:shadow-md hover:-translate-y-px will-change-transform border border-gray-100 group">
+            
+            <!-- Ультракомпактная карточка: все в один ряд -->
+            <div v-for="char in currentCategory?.characteristics" :key="char.id" class="relative bg-white rounded-2xl shadow-sm border border-gray-100 group transition duration-300 ease-out hover:shadow-md hover:-translate-y-px will-change-transform antialiased p-3 sm:p-4 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 md:items-center">
                 
-                <div class="md:col-span-1 flex justify-between items-center md:block">
-                    <div class="text-gray-400 font-bold text-sm">#{{ char.id }}</div>
+                <!-- ID -->
+                <div class="md:col-span-1 flex-shrink-0 w-6 md:w-auto">
+                    <div class="font-black text-gray-900 text-sm">#{{ char.id }}</div>
                 </div>
 
-                <div class="md:col-span-9 flex items-center gap-3">
-                    <div class="w-9 h-9 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+                <!-- Иконка и Название -->
+                <div class="md:col-span-9 flex-grow flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 md:w-9 md:h-9 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
                     </div>
                     <div class="font-bold text-gray-900 truncate">{{ char.name }}</div>
                 </div>
 
-                <div class="md:col-span-2 flex justify-end mt-1 pt-3 border-t border-gray-50 md:mt-0 md:pt-0 md:border-0">
-                    <button @click="deleteChar(char.id)" class="w-9 h-9 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-xl flex items-center justify-center transition shadow-sm border border-gray-100" title="Удалить">
+                <!-- Удалить -->
+                <div class="md:col-span-2 flex-shrink-0 flex justify-end">
+                    <button @click="deleteChar(char.id)" class="w-8 h-8 md:w-9 md:h-9 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-xl flex items-center justify-center transition shadow-sm border border-gray-100" title="Удалить">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
                 </div>

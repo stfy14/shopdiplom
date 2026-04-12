@@ -40,7 +40,8 @@ function formatDate(dt) { return new Date(dt).toLocaleDateString('ru-RU', { day:
 
 <template>
     <div>
-        <div class="flex w-full sm:w-auto mb-6 p-1 bg-white border border-gray-100 rounded-xl shadow-sm">
+        <!-- Исправлен контейнер для кнопок: на ПК компактный размер, на мобильных тянется на всю ширину -->
+        <div class="flex sm:inline-flex w-full sm:w-auto mb-6 p-1 bg-white border border-gray-100 rounded-xl shadow-sm">
             <Link href="/admin/orders" :class="['flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-lg text-sm font-bold transition', tab === 'active' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50']">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3"/></svg>
                 Активные
@@ -51,7 +52,6 @@ function formatDate(dt) { return new Date(dt).toLocaleDateString('ru-RU', { day:
             </Link>
         </div>
 
-        <!-- Заголовок — только md+ -->
         <div class="hidden md:grid grid-cols-12 gap-4 px-5 text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
             <div class="col-span-2">Заказ</div>
             <div class="col-span-5">Клиент и контакты</div>
@@ -73,18 +73,15 @@ function formatDate(dt) { return new Date(dt).toLocaleDateString('ru-RU', { day:
                        p-4 flex flex-col gap-2
                        md:grid md:grid-cols-12 md:gap-4 md:items-center md:flex-none"
             >
-                <!-- Заказ + сумма в одну строку на мобильном -->
                 <div class="md:col-span-2 flex items-start justify-between md:block">
                     <div>
                         <div class="font-black text-gray-900">#{{ order.id }}</div>
                         <div class="text-xs text-gray-400 font-mono">{{ order.uuid.substring(0, 8) }}...</div>
                         <div class="text-xs text-gray-400 mt-0.5">{{ formatDate(order.created_at) }}</div>
                     </div>
-                    <!-- Сумма рядом с номером только на мобильных -->
                     <div class="md:hidden font-black text-gray-900 text-sm">{{ formatPrice(order.total_price) }} ₽</div>
                 </div>
 
-                <!-- Клиент + контакты -->
                 <div class="md:col-span-5">
                     <div class="flex items-center gap-2 mb-1">
                         <div class="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-blue-600 flex-shrink-0">
@@ -96,19 +93,16 @@ function formatDate(dt) { return new Date(dt).toLocaleDateString('ru-RU', { day:
                     <div class="text-xs text-gray-500 truncate">г. {{ order.city }}, ул. {{ order.street }}, {{ order.house }}</div>
                 </div>
 
-                <!-- Статус — слева на мобильном, по центру на десктопе -->
                 <div class="md:col-span-3 md:flex md:justify-center">
                     <span :class="['inline-flex px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap', statusMap[order.status]?.color]">
                         {{ statusMap[order.status]?.label }}
                     </span>
                 </div>
 
-                <!-- Сумма — только на md+ -->
                 <div class="hidden md:block md:col-span-2 font-black text-gray-900 whitespace-nowrap">
                     {{ formatPrice(order.total_price) }} ₽
                 </div>
 
-                <!-- Иконки уведомлений -->
                 <div class="absolute -top-1.5 -right-1.5 flex items-center gap-1.5">
                     <div v-if="order.status === 'new'" class="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md border-2 border-white" title="Новый заказ">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>

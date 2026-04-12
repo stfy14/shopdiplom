@@ -36,38 +36,35 @@ function restoreProduct(id) {
 <template>
     <div>
         <!-- Шапка с кнопками -->
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <div class="flex flex-col lg:flex-row lg:flex-wrap gap-3 lg:gap-4 mb-6 lg:items-center">
             
-            <!-- Правый блок на ПК - на мобильном идет ПЕРВЫМ -->
-            <div class="order-1 sm:order-2 flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                <!-- Категории и Хар-ки (Ряд 1 на моб.) -->
-                <div class="flex gap-2 w-full sm:w-auto">
-                    <Link href="/admin/categories" class="flex-1 sm:flex-none flex justify-center items-center gap-2 px-4 py-2.5 sm:py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition shadow-sm">
-                        <svg class="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-                        <span>Категории</span>
-                    </Link>
-                    <Link href="/admin/characteristics" class="flex-1 sm:flex-none flex justify-center items-center gap-2 px-4 py-2.5 sm:py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition shadow-sm">
-                        <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
-                        <span class="hidden sm:inline">Характеристики</span>
-                        <span class="sm:hidden">Хар-ки</span>
-                    </Link>
-                </div>
-            </div>
-
-            <!-- Левый блок на ПК (Активные/Архив) - на мобильном идет ВТОРЫМ (посередине), НЕ растянуто -->
-            <div class="order-2 sm:order-1 flex gap-2 p-1 bg-white border border-gray-100 rounded-xl shadow-sm inline-flex self-start">
-                <Link href="/admin/products" :class="['flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition', tab === 'active' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50']">
+            <!-- Левый блок на ПК (Активные/Архив) - на мобильном идет ВТОРЫМ (посередине) -->
+            <div class="order-2 lg:order-1 flex w-full lg:w-auto p-1 bg-white border border-gray-100 rounded-xl shadow-sm flex-shrink-0">
+                <Link href="/admin/products" :class="['flex-1 lg:flex-none flex justify-center items-center gap-2 px-5 py-2.5 lg:py-2 rounded-lg text-sm font-bold transition', tab === 'active' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50']">
                     Активные
                 </Link>
-                <Link href="/admin/products?tab=deleted" :class="['flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition', tab === 'deleted' ? 'bg-red-500 text-white' : 'text-gray-500 hover:text-red-500 hover:bg-red-50']">
+                <Link href="/admin/products?tab=deleted" :class="['flex-1 lg:flex-none flex justify-center items-center gap-2 px-5 py-2.5 lg:py-2 rounded-lg text-sm font-bold transition', tab === 'deleted' ? 'bg-red-500 text-white' : 'text-gray-500 hover:text-red-500 hover:bg-red-50']">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     Архив
                 </Link>
             </div>
 
-            <!-- Кнопка Добавить - на мобильном идет ТРЕТЬЕЙ (внизу), Растянута на 100% -->
-            <div class="order-3 sm:order-3 w-full sm:w-auto mt-1 sm:mt-0">
-                <Link href="/admin/products/create" class="w-full sm:w-auto px-4 py-3 sm:py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow-sm flex items-center justify-center gap-2">
+            <!-- Категории и Хар-ки (Ряд 1 на моб, на ПК прижаты вправо благодаря lg:ml-auto) -->
+            <div class="order-1 lg:order-2 flex gap-2 w-full lg:w-auto flex-shrink-0 lg:ml-auto">
+                <Link href="/admin/categories" class="flex-1 lg:flex-none flex justify-center items-center gap-2 px-4 py-2.5 lg:py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition shadow-sm whitespace-nowrap">
+                    <svg class="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                    <span>Категории</span>
+                </Link>
+                <Link href="/admin/characteristics" class="flex-1 lg:flex-none flex justify-center items-center gap-2 px-4 py-2.5 lg:py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition shadow-sm whitespace-nowrap">
+                    <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+                    <span class="hidden sm:inline">Характеристики</span>
+                    <span class="sm:hidden">Хар-ки</span>
+                </Link>
+            </div>
+
+            <!-- Кнопка Добавить - на мобильном идет ТРЕТЬЕЙ (внизу), на ПК стоит правее всех -->
+            <div class="order-3 lg:order-3 w-full lg:w-auto flex-shrink-0 mt-1 lg:mt-0">
+                <Link href="/admin/products/create" class="w-full lg:w-auto px-4 py-3 lg:py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow-sm flex items-center justify-center gap-2 whitespace-nowrap">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                     Добавить
                 </Link>
@@ -88,7 +85,6 @@ function restoreProduct(id) {
                 Список пуст
             </div>
             
-            <!-- Карточка 1-в-1 по макету Orders.vue -->
             <div v-for="product in products" :key="product.id" 
                 class="relative bg-white rounded-2xl shadow-sm border border-gray-100 group transition duration-300 ease-out hover:shadow-md hover:-translate-y-1 will-change-transform antialiased p-4 flex flex-col gap-3 md:grid md:grid-cols-12 md:gap-4 md:items-center md:flex-none">
                 

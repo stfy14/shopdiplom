@@ -60,35 +60,56 @@ function deleteCategory(id) {
 
         <!-- Список -->
         <div class="flex flex-col gap-3">
-            <div v-for="cat in categories" :key="cat.id" class="flex flex-col gap-3 p-4 md:grid md:grid-cols-12 md:gap-4 md:items-center bg-white rounded-2xl shadow-sm transition hover:shadow-md hover:-translate-y-px will-change-transform border border-gray-100">
+            <div v-if="categories.length === 0" class="text-center py-16 text-gray-400 bg-white rounded-3xl border border-gray-100 shadow-sm">
+                Список категорий пуст
+            </div>
+
+            <div v-for="cat in categories" :key="cat.id" class="relative bg-white rounded-2xl shadow-sm border border-gray-100 group transition duration-300 ease-out hover:shadow-md hover:-translate-y-px will-change-transform antialiased p-4 flex flex-col gap-3 md:grid md:grid-cols-12 md:gap-4 md:items-center md:flex-none">
                 
-                <div class="md:col-span-1 flex justify-between items-center md:block">
-                    <div class="text-gray-400 font-bold text-sm">#{{ cat.id }}</div>
+                <!-- Строка 1 на мобилках: ID и Кол-во характеристик -->
+                <div class="md:col-span-1 flex justify-between items-start md:block">
+                    <div class="font-black text-gray-900 text-sm">#{{ cat.id }}</div>
+                    
+                    <!-- Бейдж характеристик показываем справа вверху на мобильном -->
+                    <div class="md:hidden">
+                        <span class="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-[11px] font-bold">
+                            {{ cat.characteristics_count }} хар-к
+                        </span>
+                    </div>
                 </div>
                 
+                <!-- Название -->
                 <div class="md:col-span-4 flex items-center gap-3">
-                    <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                    <div class="w-9 h-9 md:w-10 md:h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
                     </div>
                     <div class="font-bold text-gray-900 truncate">{{ cat.name }}</div>
                 </div>
 
-                <div class="md:col-span-3 flex items-center justify-between md:block">
-                    <span class="md:hidden text-xs font-bold text-gray-400 uppercase">Код:</span>
-                    <span class="font-mono text-gray-500 text-sm font-medium">{{ cat.code }}</span>
-                </div>
-                
-                <div class="md:col-span-2 flex items-center justify-between md:block">
-                    <span class="md:hidden text-xs font-bold text-gray-400 uppercase">Характеристики:</span>
-                    <span class="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold border border-gray-200">
-                        {{ cat.characteristics_count }} шт.
-                    </span>
-                </div>
+                <!-- Строка 2 на мобилках: Код и Действия -->
+                <div class="md:col-span-7 flex items-center justify-between md:contents mt-1 md:mt-0">
+                    
+                    <!-- Код (с иконкой скобок вместо надписи "КОД:") -->
+                    <div class="md:col-span-3 flex items-center gap-2">
+                        <span class="md:hidden text-gray-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                        </span>
+                        <span class="font-mono text-gray-500 text-sm font-medium">{{ cat.code }}</span>
+                    </div>
+                    
+                    <!-- Кол-во характеристик (Только на десктопе, на мобильном оно вверху) -->
+                    <div class="hidden md:block md:col-span-2">
+                        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold">
+                            {{ cat.characteristics_count }} шт.
+                        </span>
+                    </div>
 
-                <div class="md:col-span-2 flex justify-end mt-2 pt-3 border-t border-gray-50 md:mt-0 md:pt-0 md:border-0">
-                    <button @click="deleteCategory(cat.id)" class="w-9 h-9 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-xl flex items-center justify-center transition shadow-sm border border-gray-100" title="Удалить">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                    </button>
+                    <!-- Действия -->
+                    <div class="md:col-span-2 flex justify-end">
+                        <button @click="deleteCategory(cat.id)" class="w-8 h-8 md:w-9 md:h-9 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-xl flex items-center justify-center transition shadow-sm border border-gray-100" title="Удалить">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

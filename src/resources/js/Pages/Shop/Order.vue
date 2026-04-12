@@ -79,12 +79,11 @@ watch(() => props.order.messages, (nm) => {
     nm.forEach(msg => { if (!messages.value.find(m => m.id === msg.id)) messages.value.push(msg); });
 }, { deep: true })
 
-function resizeTextarea() {
-    if (!msgInput.value) return
-    const el = msgInput.value
-    el.style.height = '44px'
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
-    isExpanded.value = el.scrollHeight > 50
+function resizeTextarea(e) {
+    const el = e ? e.target : null;
+    if (!el) return;
+    el.style.height = '44px';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
 function handleEnter(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
@@ -92,13 +91,25 @@ function handleEnter(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefau
 function sendMessage() {
     if (!messageText.value.trim() || isSending.value) return
     const text = messageText.value
-    messageText.value = ''; resizeTextarea(); isSending.value = true
+    messageText.value = ''; 
+    isSending.value = true;
+    
+    // Сбрасываем высоту всех полей чата после отправки
+    document.querySelectorAll('textarea').forEach(ta => ta.style.height = '44px');
+
     const tempId = 'temp_' + Date.now()
-    messages.value.push({ id: tempId, message: text, sender_role: 'user', created_at: new Date().toISOString(), isTemp: true })
+    const role = window.location.pathname.includes('admin') ? 'admin' : 'user';
+    
+    messages.value.push({ id: tempId, message: text, sender_role: role, created_at: new Date().toISOString(), isTemp: true })
     nextTick(() => scrollToBottom())
-    axios.post(`/orders/${props.order.id}/messages`, { message: text })
+    
+    const url = window.location.pathname.includes('admin') 
+        ? `/admin/orders/${props.order.id}/messages` 
+        : `/orders/${props.order.id}/messages`;
+
+    axios.post(url, { message: text })
         .then(res => { isSending.value = false; const i = messages.value.findIndex(m => m.id === tempId); if (i !== -1) messages.value[i] = res.data; })
-        .catch(() => { isSending.value = false; const i = messages.value.findIndex(m => m.id === tempId); if (i !== -1) messages.value.splice(i, 1); messageText.value = text; resizeTextarea(); toast.error('Ошибка отправки сообщения'); })
+        .catch(() => { isSending.value = false; const i = messages.value.findIndex(m => m.id === tempId); if (i !== -1) messages.value.splice(i, 1); messageText.value = text; toast.error('Ошибка отправки'); })
 }
 
 onMounted(() => {
@@ -135,8 +146,6 @@ function formatTime(dt) { return new Date(dt).toLocaleTimeString('ru-RU', { hour
 
             <!-- ЛЕВЫЙ БЛОК -->
             <div class="lg:col-span-2 flex flex-col gap-0">
-
-                <!-- Заголовок страницы -->
                 <div class="flex items-center gap-4 mb-6">
                     <Link href="/profile" class="w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition shadow-sm">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
@@ -148,7 +157,6 @@ function formatTime(dt) { return new Date(dt).toLocaleTimeString('ru-RU', { hour
                     <span :class="['ml-auto px-4 py-1.5 rounded-xl text-sm font-bold', st.color]">{{ st.label }}</span>
                 </div>
 
-                <!-- Один общий блок -->
                 <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
 
                     <!-- ── Контактная информация ── -->
@@ -161,7 +169,6 @@ function formatTime(dt) { return new Date(dt).toLocaleTimeString('ru-RU', { hour
                             </button>
                         </div>
                         <div>
-                            <!-- Получатель -->
                             <div class="flex items-center gap-4 mb-6">
                                 <div class="w-11 h-11 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
@@ -172,14 +179,12 @@ function formatTime(dt) { return new Date(dt).toLocaleTimeString('ru-RU', { hour
                                 </div>
                             </div>
                             
-                            <!-- Просмотр -->
                             <div v-if="!editingContacts">
                                 <div class="font-black text-gray-900 text-lg mb-1">{{ order.phone }}</div>
                                 <div class="text-gray-600 text-sm font-medium">г. {{ order.city }}, ул. {{ order.street }}, д. {{ order.house }}</div>
                                 <div v-if="order.comment" class="text-sm text-gray-600 mt-3 p-3 bg-gray-50 rounded-xl border-l-4 border-l-blue-400 italic">«{{ order.comment }}»</div>
                             </div>
                             
-                            <!-- Редактирование -->
                             <div v-else class="space-y-4">
                                 <div>
                                     <label class="block text-[11px] font-black text-gray-400 uppercase tracking-wider mb-1.5 ml-1">Телефон</label>
@@ -221,7 +226,6 @@ function formatTime(dt) { return new Date(dt).toLocaleTimeString('ru-RU', { hour
                         </div>
                         <div>
                             <div class="flex flex-col gap-3">
-                                <!-- Обновленный дизайн карточек товаров -->
                                 <Link v-for="item in order.items" :key="item.id" :href="`/product/${item.product_id}`" target="_blank"
                                     class="flex items-center gap-4 bg-white rounded-2xl shadow-sm p-4 transition hover:shadow-md hover:-translate-y-px will-change-transform border border-gray-100 group">
                                     <div class="w-14 h-14 bg-white rounded-xl border border-gray-100 shadow-sm flex flex-shrink-0 items-center justify-center p-1.5">
@@ -258,11 +262,8 @@ function formatTime(dt) { return new Date(dt).toLocaleTimeString('ru-RU', { hour
             </div>
 
             <!-- ЧАТ десктоп -->
-            <div
-                class="hidden lg:flex lg:col-span-1 flex-col bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden"
-                style="position: sticky; top: 88px; height: calc(100vh - 88px - 32px);"
-            >
-                <div class="px-5 py-4 border-b border-gray-100 bg-white flex items-center gap-3 flex-shrink-0">
+            <div class="hidden lg:flex lg:col-span-1 flex-col bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden" style="position: sticky; top: 88px; height: calc(100vh - 88px - 32px);">
+                <div class="px-5 py-4 bg-white shadow-sm relative z-10 flex items-center gap-3 flex-shrink-0">
                     <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 01-.923 1.785A5.969 5.969 0 006 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337z" /></svg>
                     </div>
@@ -275,8 +276,8 @@ function formatTime(dt) { return new Date(dt).toLocaleTimeString('ru-RU', { hour
                 <div class="flex-grow overflow-y-auto p-5 bg-gray-50/50 flex flex-col gap-3 relative" ref="chatBox" @scroll="handleScroll">
                     <div v-if="messages.length === 0" class="text-center text-gray-400 text-sm font-medium my-auto">У вас есть вопросы? Напишите нам!</div>
                     <div v-for="msg in sortedMessages" :key="msg.id"
-                         :class="['max-w-[85%] p-3.5 text-sm break-words shadow-sm border',
-                                 msg.sender_role === 'user' ? 'bg-blue-600 border-blue-600 text-white self-end rounded-2xl rounded-br-sm' : 'bg-white border-gray-200 text-gray-800 self-start rounded-2xl rounded-bl-sm',
+                         :class="['max-w-[85%] p-3.5 text-sm break-words shadow-sm',
+                                 msg.sender_role === 'user' ? 'bg-blue-600 text-white self-end rounded-2xl rounded-br-sm' : 'bg-white text-gray-800 self-start rounded-2xl rounded-bl-sm',
                                  msg.isTemp ? 'opacity-70' : '']">
                         <span class="whitespace-pre-wrap font-medium">{{ msg.message }}</span>
                         <div :class="['text-[10px] text-right mt-1.5 font-bold', msg.sender_role === 'user' ? 'text-blue-200' : 'text-gray-400']">{{ formatTime(msg.created_at) }}</div>
@@ -287,15 +288,16 @@ function formatTime(dt) { return new Date(dt).toLocaleTimeString('ru-RU', { hour
                     </button>
                 </div>
 
+                <!-- Ввод: items-stretch растягивает кнопку по высоте -->
                 <div class="p-3 bg-white border-t border-gray-100 flex-shrink-0">
-                    <div :class="['flex items-stretch bg-gray-50 p-1 border border-gray-200 focus-within:border-blue-400 focus-within:bg-white transition-all duration-200', isExpanded ? 'rounded-2xl' : 'rounded-[24px] gap-2']">
+                    <div class="relative flex items-stretch bg-white border border-gray-200 rounded-xl shadow-sm focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
                         <textarea ref="msgInput" v-model="messageText" @input="resizeTextarea" @keydown="handleEnter"
                             placeholder="Ваше сообщение..." rows="1"
-                            class="flex-grow bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-[15px] py-[12px] px-4 font-medium resize-none leading-[20px] block"
+                            class="flex-grow bg-transparent border-0 outline-none focus:ring-0 text-[15px] py-[10px] px-4 font-medium resize-none leading-[24px] block rounded-xl"
                             style="height: 44px;"></textarea>
                         <button @click="sendMessage" :disabled="!messageText || !messageText.trim() || isSending"
-                            :class="['w-[44px] flex-shrink-0 text-white flex items-center justify-center disabled:opacity-50 transition-all duration-200', isExpanded ? 'rounded-l-md rounded-r-xl bg-blue-600 hover:bg-blue-700' : 'rounded-[22px] bg-blue-600 hover:bg-blue-700']">
-                            <svg class="w-5 h-5 ml-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+                            class="w-[36px] flex-shrink-0 m-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center disabled:opacity-50 transition">
+                            <svg class="w-5 h-5 ml-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
                         </button>
                     </div>
                 </div>
@@ -303,7 +305,7 @@ function formatTime(dt) { return new Date(dt).toLocaleTimeString('ru-RU', { hour
 
             <!-- Чат мобильный -->
             <div class="lg:hidden flex flex-col bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden" style="height: 480px;">
-                <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-3 flex-shrink-0">
+                <div class="px-5 py-4 bg-white shadow-sm relative z-10 flex items-center gap-3 flex-shrink-0">
                     <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 01-.923 1.785A5.969 5.969 0 006 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337z" /></svg>
                     </div>
@@ -312,20 +314,21 @@ function formatTime(dt) { return new Date(dt).toLocaleTimeString('ru-RU', { hour
                 <div class="flex-grow overflow-y-auto p-4 bg-gray-50/50 flex flex-col gap-3">
                     <div v-if="messages.length === 0" class="text-center text-gray-400 text-sm font-medium my-auto">У вас есть вопросы? Напишите нам!</div>
                     <div v-for="msg in sortedMessages" :key="msg.id + '_m'"
-                         :class="['max-w-[85%] p-3 text-sm break-words shadow-sm border',
-                                 msg.sender_role === 'user' ? 'bg-blue-600 border-blue-600 text-white self-end rounded-2xl rounded-br-sm' : 'bg-white border-gray-200 text-gray-800 self-start rounded-2xl rounded-bl-sm']">
+                         :class="['max-w-[85%] p-3.5 text-sm break-words shadow-sm',
+                                 msg.sender_role === 'user' ? 'bg-blue-600 text-white self-end rounded-2xl rounded-br-sm' : 'bg-white text-gray-800 self-start rounded-2xl rounded-bl-sm']">
                         <span class="whitespace-pre-wrap font-medium">{{ msg.message }}</span>
-                        <div :class="['text-[10px] text-right mt-1 font-bold', msg.sender_role === 'user' ? 'text-blue-200' : 'text-gray-400']">{{ formatTime(msg.created_at) }}</div>
+                        <div :class="['text-[10px] text-right mt-1.5 font-bold', msg.sender_role === 'user' ? 'text-blue-200' : 'text-gray-400']">{{ formatTime(msg.created_at) }}</div>
                     </div>
                 </div>
                 <div class="p-3 bg-white border-t border-gray-100 flex-shrink-0">
-                    <div class="flex items-center gap-2 bg-gray-50 p-1 rounded-[24px] border border-gray-200">
-                        <textarea v-model="messageText" @keydown="handleEnter" placeholder="Ваше сообщение..." rows="1"
-                            class="flex-grow bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-[15px] py-[10px] px-4 font-medium resize-none leading-[20px]"
+                    <!-- Ввод: items-stretch растягивает кнопку по высоте -->
+                    <div class="relative flex items-stretch bg-white border border-gray-200 rounded-xl shadow-sm focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+                        <textarea v-model="messageText" @input="resizeTextarea" @keydown="handleEnter" placeholder="Ваше сообщение..." rows="1"
+                            class="flex-grow bg-transparent border-0 outline-none focus:ring-0 text-[15px] py-[10px] px-4 font-medium resize-none leading-[24px] block rounded-xl"
                             style="height: 44px;"></textarea>
                         <button @click="sendMessage" :disabled="!messageText || !messageText.trim() || isSending"
-                            class="w-[44px] h-[44px] flex-shrink-0 rounded-[22px] bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center disabled:opacity-50 transition">
-                            <svg class="w-5 h-5 ml-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+                            class="w-[36px] flex-shrink-0 m-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center disabled:opacity-50 transition">
+                            <svg class="w-5 h-5 ml-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
                         </button>
                     </div>
                 </div>

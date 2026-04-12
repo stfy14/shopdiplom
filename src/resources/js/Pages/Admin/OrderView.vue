@@ -13,6 +13,7 @@ const chatBox = ref(null)
 const msgInput = ref(null)
 const messageText = ref('')
 const isSending = ref(false)
+const isSelectOpen = ref(false)
 
 const statusForm = useForm({ status: props.order.status })
 const contactForm = useForm({
@@ -78,12 +79,11 @@ watch(() => props.order.messages, (nm) => {
     nm.forEach(msg => { if (!messages.value.find(m => m.id === msg.id)) messages.value.push(msg); });
 }, { deep: true })
 
-function resizeTextarea() {
-    if (!msgInput.value) return
-    const el = msgInput.value
-    el.style.height = '44px'
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
-    isExpanded.value = el.scrollHeight > 50
+function resizeTextarea(e) {
+    const el = e ? e.target : null;
+    if (!el) return;
+    el.style.height = '44px';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
 function handleEnter(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
@@ -93,13 +93,25 @@ function formatTime(dt) { return new Date(dt).toLocaleTimeString('ru-RU', { hour
 function sendMessage() {
     if (!messageText.value.trim() || isSending.value) return
     const text = messageText.value
-    messageText.value = ''; resizeTextarea(); isSending.value = true
+    messageText.value = ''; 
+    isSending.value = true;
+    
+    // Сбрасываем высоту всех полей чата после отправки
+    document.querySelectorAll('textarea').forEach(ta => ta.style.height = '44px');
+
     const tempId = 'temp_' + Date.now()
-    messages.value.push({ id: tempId, message: text, sender_role: 'admin', created_at: new Date().toISOString(), isTemp: true })
+    const role = window.location.pathname.includes('admin') ? 'admin' : 'user';
+    
+    messages.value.push({ id: tempId, message: text, sender_role: role, created_at: new Date().toISOString(), isTemp: true })
     nextTick(() => scrollToBottom())
-    axios.post(`/admin/orders/${props.order.id}/messages`, { message: text })
+    
+    const url = window.location.pathname.includes('admin') 
+        ? `/admin/orders/${props.order.id}/messages` 
+        : `/orders/${props.order.id}/messages`;
+
+    axios.post(url, { message: text })
         .then(res => { isSending.value = false; const i = messages.value.findIndex(m => m.id === tempId); if (i !== -1) messages.value[i] = res.data; })
-        .catch(() => { isSending.value = false; const i = messages.value.findIndex(m => m.id === tempId); if (i !== -1) messages.value.splice(i, 1); messageText.value = text; resizeTextarea(); toast.error('Ошибка отправки'); })
+        .catch(() => { isSending.value = false; const i = messages.value.findIndex(m => m.id === tempId); if (i !== -1) messages.value.splice(i, 1); messageText.value = text; toast.error('Ошибка отправки'); })
 }
 
 onMounted(() => {
@@ -153,12 +165,27 @@ const st = computed(() => {
                 <div class="mb-4">
                     <span class="text-xs text-gray-400 uppercase font-black tracking-wider">Статус заказа</span>
                 </div>
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <!-- Обновленный дизайн select поля (как input) -->
-                    <select v-model="statusForm.status" class="flex-grow px-4 py-3 bg-white rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-sm font-bold transition shadow-sm">
-                        <option v-for="(data, code) in statusMap" :key="code" :value="code">{{ data.label }}</option>
-                    </select>
-                    <button @click="updateStatus" :disabled="statusForm.processing" class="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-sm disabled:opacity-50 whitespace-nowrap">
+                <div class="flex flex-col sm:flex-row gap-3 relative">
+                    
+                    <div v-if="isSelectOpen" @click="isSelectOpen = false" class="fixed inset-0 z-10"></div>
+                    
+                    <div class="relative flex-grow z-20">
+                        <button @click="isSelectOpen = !isSelectOpen" type="button" class="w-full h-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-bold transition shadow-sm flex items-center justify-between text-gray-800">
+                            <span class="truncate">{{ statusMap[statusForm.status]?.label }}</span>
+                            <svg :class="['w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0', isSelectOpen ? 'rotate-180' : '']" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+
+                        <transition enter-active-class="transition duration-100 ease-out" enter-from-class="transform scale-95 opacity-0" enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-75 ease-in" leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
+                            <div v-if="isSelectOpen" class="absolute z-10 w-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+                                <button v-for="(data, code) in statusMap" :key="code" @click="statusForm.status = code; isSelectOpen = false" type="button" :class="['w-full text-left px-4 py-2.5 text-sm font-bold transition flex items-center justify-between', statusForm.status === code ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50']">
+                                    <span class="truncate">{{ data.label }}</span>
+                                    <svg v-if="statusForm.status === code" class="w-4 h-4 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                </button>
+                            </div>
+                        </transition>
+                    </div>
+
+                    <button @click="updateStatus" :disabled="statusForm.processing" class="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-sm disabled:opacity-50 whitespace-nowrap z-0 relative">
                         Обновить статус
                     </button>
                 </div>
@@ -177,7 +204,6 @@ const st = computed(() => {
                 </div>
                 
                 <div>
-                    <!-- Клиент -->
                     <div class="flex items-center gap-4 mb-6">
                         <div class="w-11 h-11 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
@@ -188,14 +214,12 @@ const st = computed(() => {
                         </div>
                     </div>
                     
-                    <!-- Просмотр -->
                     <div v-if="!editingContacts">
                         <div class="font-black text-gray-900 text-lg mb-1">{{ order.phone }}</div>
                         <div class="text-gray-600 text-sm font-medium">г. {{ order.city }}, ул. {{ order.street }}, д. {{ order.house }}</div>
                         <div v-if="order.comment" class="text-sm text-gray-600 mt-3 p-3 bg-gray-50 rounded-xl border-l-4 border-l-yellow-400 italic">«{{ order.comment }}»</div>
                     </div>
                     
-                    <!-- Редактирование -->
                     <div v-else class="space-y-4">
                         <div>
                             <label class="block text-[11px] font-black text-gray-400 uppercase tracking-wider mb-1.5 ml-1">Телефон</label>
@@ -237,7 +261,6 @@ const st = computed(() => {
                 </div>
                 <div>
                     <div class="flex flex-col gap-3">
-                        <!-- Обновленный дизайн карточек товаров (анимация, тени, белый фон) -->
                         <Link v-for="item in order.items" :key="item.id" :href="`/product/${item.product_id}`" target="_blank"
                             class="flex items-center gap-4 bg-white rounded-2xl shadow-sm p-4 transition hover:shadow-md hover:-translate-y-px will-change-transform border border-gray-100 group">
                             <div class="w-14 h-14 bg-white rounded-xl border border-gray-100 shadow-sm flex flex-shrink-0 items-center justify-center p-1.5">
@@ -250,7 +273,6 @@ const st = computed(() => {
                                 </div>
                                 <div class="text-gray-500 text-xs font-medium mt-0.5">Артикул: {{ item.product_id }} · {{ item.quantity }} шт.</div>
                             </div>
-                            <!-- Добавлено отображение скидки -->
                             <div class="text-right flex-shrink-0">
                                 <div class="font-black text-gray-900 whitespace-nowrap text-sm">{{ formatPrice(item.price_at_purchase * item.quantity) }} ₽</div>
                                 <div v-if="item.product?.discount > 0" class="text-[11px] font-bold text-red-500 mt-0.5">-{{ item.product.discount }}% скидка</div>
@@ -266,12 +288,9 @@ const st = computed(() => {
 
         </div>
 
-        <!-- ПРАВЫЙ БЛОК — чат -->
-        <div
-            class="hidden lg:flex lg:col-span-1 flex-col bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden"
-            style="position: sticky; top: 88px; height: calc(100vh - 88px - 32px);"
-        >
-            <div class="px-5 py-4 border-b border-gray-100 bg-white flex items-center gap-3 flex-shrink-0">
+        <!-- ПРАВЫЙ БЛОК — чат (Десктоп) -->
+        <div class="hidden lg:flex lg:col-span-1 flex-col bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden" style="position: sticky; top: 88px; height: calc(100vh - 88px - 32px);">
+            <div class="px-5 py-4 bg-white shadow-sm relative z-10 flex items-center gap-3 flex-shrink-0">
                 <div class="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 01-.923 1.785A5.969 5.969 0 006 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337z" /></svg>
                 </div>
@@ -284,8 +303,8 @@ const st = computed(() => {
             <div class="flex-grow overflow-y-auto p-5 bg-gray-50/50 flex flex-col gap-3 relative" ref="chatBox" @scroll="handleScroll">
                 <div v-if="messages.length === 0" class="text-center text-gray-400 text-sm font-medium my-auto">История сообщений пуста</div>
                 <div v-for="msg in sortedMessages" :key="msg.id"
-                     :class="['max-w-[85%] p-3.5 text-sm break-words shadow-sm border',
-                             msg.sender_role === 'admin' ? 'bg-yellow-400 border-yellow-400 text-gray-900 self-end rounded-2xl rounded-br-sm' : 'bg-white border-gray-200 text-gray-800 self-start rounded-2xl rounded-bl-sm',
+                     :class="['max-w-[85%] p-3.5 text-sm break-words shadow-sm',
+                             msg.sender_role === 'admin' ? 'bg-yellow-400 text-gray-900 self-end rounded-2xl rounded-br-sm' : 'bg-white text-gray-800 self-start rounded-2xl rounded-bl-sm',
                              msg.isTemp ? 'opacity-70' : '']">
                     <span class="whitespace-pre-wrap font-medium">{{ msg.message }}</span>
                     <div :class="['text-[10px] text-right mt-1.5 font-bold', msg.sender_role === 'admin' ? 'text-yellow-700' : 'text-gray-400']">{{ formatTime(msg.created_at) }}</div>
@@ -296,15 +315,16 @@ const st = computed(() => {
                 </button>
             </div>
 
+            <!-- Ввод: items-stretch растягивает кнопку по высоте -->
             <div class="p-3 bg-white border-t border-gray-100 flex-shrink-0">
-                <div :class="['flex items-stretch bg-gray-50 p-1 border border-gray-200 focus-within:border-yellow-400 focus-within:bg-white transition-all duration-200', isExpanded ? 'rounded-2xl' : 'rounded-[24px] gap-2']">
-                    <textarea ref="msgInput" v-model="messageText" @input="resizeTextarea" @keydown="handleEnter"
+                <div class="relative flex items-stretch bg-white border border-gray-200 rounded-xl shadow-sm focus-within:border-yellow-400 focus-within:ring-1 focus-within:ring-yellow-400 transition-all">
+                    <textarea v-model="messageText" @input="resizeTextarea" @keydown="handleEnter"
                         placeholder="Ответить клиенту..." rows="1"
-                        class="flex-grow bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-[15px] py-[12px] px-4 font-medium resize-none leading-[20px] block"
+                        class="flex-grow bg-transparent border-0 outline-none focus:ring-0 text-[15px] py-[10px] px-4 font-medium resize-none leading-[24px] block rounded-xl"
                         style="height: 44px;"></textarea>
                     <button @click="sendMessage" :disabled="!messageText || !messageText.trim() || isSending"
-                        :class="['w-[44px] flex-shrink-0 text-gray-900 flex items-center justify-center disabled:opacity-50 transition-all duration-200', isExpanded ? 'rounded-l-md rounded-r-xl bg-yellow-400 hover:bg-yellow-500' : 'rounded-[22px] bg-yellow-400 hover:bg-yellow-500']">
-                        <svg class="w-5 h-5 ml-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+                        class="w-[36px] flex-shrink-0 m-1 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-gray-900 flex items-center justify-center disabled:opacity-50 transition">
+                        <svg class="w-5 h-5 ml-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
                     </button>
                 </div>
             </div>
@@ -312,7 +332,7 @@ const st = computed(() => {
 
         <!-- Чат на мобильных -->
         <div class="lg:hidden flex flex-col bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden" style="height: 480px;">
-            <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-3 flex-shrink-0">
+            <div class="px-5 py-4 bg-white shadow-sm relative z-10 flex items-center gap-3 flex-shrink-0">
                 <div class="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 01-.923 1.785A5.969 5.969 0 006 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337z" /></svg>
                 </div>
@@ -321,20 +341,21 @@ const st = computed(() => {
             <div class="flex-grow overflow-y-auto p-4 bg-gray-50/50 flex flex-col gap-3">
                 <div v-if="messages.length === 0" class="text-center text-gray-400 text-sm font-medium my-auto">История сообщений пуста</div>
                 <div v-for="msg in sortedMessages" :key="msg.id + '_m'"
-                     :class="['max-w-[85%] p-3 text-sm break-words shadow-sm border',
-                             msg.sender_role === 'admin' ? 'bg-yellow-400 border-yellow-400 text-gray-900 self-end rounded-2xl rounded-br-sm' : 'bg-white border-gray-200 text-gray-800 self-start rounded-2xl rounded-bl-sm']">
+                     :class="['max-w-[85%] p-3.5 text-sm break-words shadow-sm',
+                             msg.sender_role === 'admin' ? 'bg-yellow-400 text-gray-900 self-end rounded-2xl rounded-br-sm' : 'bg-white text-gray-800 self-start rounded-2xl rounded-bl-sm']">
                     <span class="whitespace-pre-wrap font-medium">{{ msg.message }}</span>
-                    <div :class="['text-[10px] text-right mt-1 font-bold', msg.sender_role === 'admin' ? 'text-yellow-700' : 'text-gray-400']">{{ formatTime(msg.created_at) }}</div>
+                    <div :class="['text-[10px] text-right mt-1.5 font-bold', msg.sender_role === 'admin' ? 'text-yellow-700' : 'text-gray-400']">{{ formatTime(msg.created_at) }}</div>
                 </div>
             </div>
             <div class="p-3 bg-white border-t border-gray-100 flex-shrink-0">
-                <div class="flex items-center gap-2 bg-gray-50 p-1 rounded-[24px] border border-gray-200">
-                    <textarea v-model="messageText" @keydown="handleEnter" placeholder="Ответить клиенту..." rows="1"
-                        class="flex-grow bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-[15px] py-[10px] px-4 font-medium resize-none leading-[20px]"
+                <!-- Ввод: items-stretch растягивает кнопку по высоте -->
+                <div class="relative flex items-stretch bg-white border border-gray-200 rounded-xl shadow-sm focus-within:border-yellow-400 focus-within:ring-1 focus-within:ring-yellow-400 transition-all">
+                    <textarea v-model="messageText" @input="resizeTextarea" @keydown="handleEnter" placeholder="Ваше сообщение..." rows="1"
+                        class="flex-grow bg-transparent border-0 outline-none focus:ring-0 text-[15px] py-[10px] px-4 font-medium resize-none leading-[24px] block rounded-xl"
                         style="height: 44px;"></textarea>
                     <button @click="sendMessage" :disabled="!messageText || !messageText.trim() || isSending"
-                        class="w-[44px] h-[44px] flex-shrink-0 rounded-[22px] bg-yellow-400 hover:bg-yellow-500 text-gray-900 flex items-center justify-center disabled:opacity-50 transition">
-                        <svg class="w-5 h-5 ml-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+                        class="w-[36px] flex-shrink-0 m-1 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-gray-900 flex items-center justify-center disabled:opacity-50 transition">
+                        <svg class="w-5 h-5 ml-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
                     </button>
                 </div>
             </div>

@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3'
-import { onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 
 defineOptions({ layout: AdminLayout });
 
@@ -36,11 +36,25 @@ const statusMap = {
 
 function formatPrice(price) { return new Intl.NumberFormat('ru-RU').format(price) }
 function formatDate(dt) { return new Date(dt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
+
+// Сортировка и пагинация (у заказов сортировка по убыванию ID - новые сверху)
+const currentPage = ref(1)
+watch(() => props.tab, () => { currentPage.value = 1 }) // Сброс страницы при смене вкладки
+
+const sortedOrders = computed(() => {
+    return [...props.orders].sort((a, b) => b.id - a.id)
+})
+
+const paginatedOrders = computed(() => {
+    const start = (currentPage.value - 1) * 10
+    return sortedOrders.value.slice(start, start + 10)
+})
+
+const totalPages = computed(() => Math.ceil(sortedOrders.value.length / 10))
 </script>
 
 <template>
     <div>
-        <!-- Исправлен контейнер для кнопок: на ПК компактный размер, на мобильных тянется на всю ширину -->
         <div class="flex sm:inline-flex w-full sm:w-auto mb-6 p-1 bg-white border border-gray-100 rounded-xl shadow-sm">
             <Link href="/admin/orders" :class="['flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-lg text-sm font-bold transition', tab === 'active' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50']">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3"/></svg>
@@ -65,7 +79,7 @@ function formatDate(dt) { return new Date(dt).toLocaleDateString('ru-RU', { day:
             </div>
 
             <Link
-                v-for="order in orders"
+                v-for="order in paginatedOrders"
                 :key="order.id"
                 :href="`/admin/orders/${order.id}`"
                 class="relative bg-white rounded-2xl shadow-sm border border-gray-100 group
@@ -115,6 +129,19 @@ function formatDate(dt) { return new Date(dt).toLocaleDateString('ru-RU', { day:
                     </div>
                 </div>
             </Link>
+
+            <!-- Пагинация -->
+            <div v-if="totalPages > 1" class="flex justify-center items-center gap-2 mt-4 mb-2">
+                <button @click="currentPage--" :disabled="currentPage === 1" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 transition shadow-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <div class="text-sm font-bold text-gray-700 px-4">
+                    Страница {{ currentPage }} из {{ totalPages }}
+                </div>
+                <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 transition shadow-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
+            </div>
         </div>
     </div>
 </template>

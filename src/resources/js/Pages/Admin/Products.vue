@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3'
-import { onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 
 defineOptions({ layout: AdminLayout });
 
@@ -31,14 +31,26 @@ function deleteProduct(id) {
 function restoreProduct(id) {
     router.patch(`/admin/products/${id}/restore`)
 }
+
+// Сортировка и пагинация
+const currentPage = ref(1)
+watch(() => props.tab, () => { currentPage.value = 1 }) // Сброс страницы при смене вкладки
+
+const sortedProducts = computed(() => {
+    return [...props.products].sort((a, b) => a.id - b.id)
+})
+
+const paginatedProducts = computed(() => {
+    const start = (currentPage.value - 1) * 10
+    return sortedProducts.value.slice(start, start + 10)
+})
+
+const totalPages = computed(() => Math.ceil(sortedProducts.value.length / 10))
 </script>
 
 <template>
     <div>
-        <!-- Шапка с кнопками -->
         <div class="flex flex-col lg:flex-row lg:flex-wrap gap-3 lg:gap-4 mb-6 lg:items-center">
-            
-            <!-- Левый блок на ПК (Активные/Архив) - на мобильном идет ВТОРЫМ (посередине) -->
             <div class="order-2 lg:order-1 flex w-full lg:w-auto p-1 bg-white border border-gray-100 rounded-xl shadow-sm flex-shrink-0">
                 <Link href="/admin/products" :class="['flex-1 lg:flex-none flex justify-center items-center gap-2 px-5 py-2.5 lg:py-2 rounded-lg text-sm font-bold transition', tab === 'active' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50']">
                     Активные
@@ -49,7 +61,6 @@ function restoreProduct(id) {
                 </Link>
             </div>
 
-            <!-- Категории и Хар-ки (Ряд 1 на моб, на ПК прижаты вправо благодаря lg:ml-auto) -->
             <div class="order-1 lg:order-2 flex gap-2 w-full lg:w-auto flex-shrink-0 lg:ml-auto">
                 <Link href="/admin/categories" class="flex-1 lg:flex-none flex justify-center items-center gap-2 px-4 py-2.5 lg:py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition shadow-sm whitespace-nowrap">
                     <svg class="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
@@ -62,14 +73,12 @@ function restoreProduct(id) {
                 </Link>
             </div>
 
-            <!-- Кнопка Добавить - на мобильном идет ТРЕТЬЕЙ (внизу), на ПК стоит правее всех -->
             <div class="order-3 lg:order-3 w-full lg:w-auto flex-shrink-0 mt-1 lg:mt-0">
                 <Link href="/admin/products/create" class="w-full lg:w-auto px-4 py-3 lg:py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow-sm flex items-center justify-center gap-2 whitespace-nowrap">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                     Добавить
                 </Link>
             </div>
-            
         </div>
 
         <div class="hidden md:grid grid-cols-12 gap-4 px-5 text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
@@ -85,10 +94,9 @@ function restoreProduct(id) {
                 Список пуст
             </div>
             
-            <div v-for="product in products" :key="product.id" 
+            <div v-for="product in paginatedProducts" :key="product.id" 
                 class="relative bg-white rounded-2xl shadow-sm border border-gray-100 group transition duration-300 ease-out hover:shadow-md hover:-translate-y-1 will-change-transform antialiased p-4 flex flex-col gap-3 md:grid md:grid-cols-12 md:gap-4 md:items-center md:flex-none">
                 
-                <!-- Row 1: ID, Category, Price (Mobile) -->
                 <div class="md:col-span-2 flex items-start justify-between md:block">
                     <div>
                         <div class="font-black text-gray-900">#{{ product.id }}</div>
@@ -100,7 +108,6 @@ function restoreProduct(id) {
                     </div>
                 </div>
 
-                <!-- Row 2: Image and Title -->
                 <div class="md:col-span-4">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 md:w-10 md:h-10 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 p-1 flex-shrink-0">
@@ -110,9 +117,7 @@ function restoreProduct(id) {
                     </div>
                 </div>
 
-                <!-- Row 3: Stock, Price (Desktop), Actions -->
                 <div class="md:col-span-6 flex items-center justify-between md:contents mt-1 md:mt-0">
-                    
                     <div class="md:col-span-2 md:flex md:justify-center">
                         <span :class="['inline-flex px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap', product.quantity === 0 ? 'bg-red-50 text-red-600' : product.quantity < 5 ? 'bg-yellow-50 text-yellow-700' : 'bg-green-50 text-green-700']">
                             {{ product.quantity }} шт.
@@ -139,6 +144,19 @@ function restoreProduct(id) {
                         </button>
                     </div>
                 </div>
+            </div>
+
+            <!-- Пагинация -->
+            <div v-if="totalPages > 1" class="flex justify-center items-center gap-2 mt-4 mb-2">
+                <button @click="currentPage--" :disabled="currentPage === 1" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 transition shadow-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <div class="text-sm font-bold text-gray-700 px-4">
+                    Страница {{ currentPage }} из {{ totalPages }}
+                </div>
+                <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 transition shadow-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
             </div>
         </div>
     </div>

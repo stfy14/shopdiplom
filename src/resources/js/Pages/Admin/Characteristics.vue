@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm, router } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 defineOptions({ layout: AdminLayout });
 
@@ -29,6 +29,22 @@ function deleteChar(id) {
         router.delete(`/admin/characteristics/${id}`)
     }
 }
+
+// Сортировка и пагинация
+const currentPage = ref(1)
+watch(selectedCategoryId, () => { currentPage.value = 1 }) // Сброс страницы при смене категории
+
+const sortedCharacteristics = computed(() => {
+    if (!currentCategory.value?.characteristics) return []
+    return [...currentCategory.value.characteristics].sort((a, b) => a.id - b.id)
+})
+
+const paginatedCharacteristics = computed(() => {
+    const start = (currentPage.value - 1) * 10
+    return sortedCharacteristics.value.slice(start, start + 10)
+})
+
+const totalPages = computed(() => Math.ceil(sortedCharacteristics.value.length / 10))
 </script>
 
 <template>
@@ -93,15 +109,11 @@ function deleteChar(id) {
                 Характеристик для этой категории нет
             </div>
             
-            <!-- Ультракомпактная карточка: все в один ряд -->
-            <div v-for="char in currentCategory?.characteristics" :key="char.id" class="relative bg-white rounded-2xl shadow-sm border border-gray-100 group transition duration-300 ease-out hover:shadow-md hover:-translate-y-px will-change-transform antialiased p-3 sm:p-4 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 md:items-center">
-                
-                <!-- ID -->
+            <div v-for="char in paginatedCharacteristics" :key="char.id" class="relative bg-white rounded-2xl shadow-sm border border-gray-100 group transition duration-300 ease-out hover:shadow-md hover:-translate-y-px will-change-transform antialiased p-3 sm:p-4 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 md:items-center">
                 <div class="md:col-span-1 flex-shrink-0 w-6 md:w-auto">
                     <div class="font-black text-gray-900 text-sm">#{{ char.id }}</div>
                 </div>
 
-                <!-- Иконка и Название -->
                 <div class="md:col-span-9 flex-grow flex items-center gap-3 min-w-0">
                     <div class="w-8 h-8 md:w-9 md:h-9 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
                         <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
@@ -109,12 +121,24 @@ function deleteChar(id) {
                     <div class="font-bold text-gray-900 truncate">{{ char.name }}</div>
                 </div>
 
-                <!-- Удалить -->
                 <div class="md:col-span-2 flex-shrink-0 flex justify-end">
                     <button @click="deleteChar(char.id)" class="w-8 h-8 md:w-9 md:h-9 bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-xl flex items-center justify-center transition shadow-sm border border-gray-100" title="Удалить">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
                 </div>
+            </div>
+
+            <!-- Пагинация -->
+            <div v-if="totalPages > 1" class="flex justify-center items-center gap-2 mt-4 mb-2">
+                <button @click="currentPage--" :disabled="currentPage === 1" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 transition shadow-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <div class="text-sm font-bold text-gray-700 px-4">
+                    Страница {{ currentPage }} из {{ totalPages }}
+                </div>
+                <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 transition shadow-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
             </div>
         </div>
     </div>

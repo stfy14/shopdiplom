@@ -26,7 +26,17 @@ function formatPrice(price) { return new Intl.NumberFormat('ru-RU').format(price
 
                 <!-- Инфо -->
                 <div class="md:col-span-6 lg:col-span-7 p-8 md:p-10 flex flex-col bg-white">
-                    <div class="text-xs font-bold tracking-widest text-blue-600 uppercase mb-3">{{ product.category?.name }}</div>
+                    
+                    <!-- Верхняя строка: Категория и кнопка ред. -->
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="text-xs font-bold tracking-widest text-blue-600 uppercase mt-2">{{ product.category?.name }}</div>
+                        
+                        <!-- БЕЗОПАСНАЯ ПРОВЕРКА РОЛИ АДМИНА ЧЕРЕЗ $page.props -->
+                        <Link v-if="$page.props.auth.user?.role === 'admin'" :href="`/admin/products/${product.id}/edit`" class="w-9 h-9 bg-white hover:bg-blue-50 text-gray-400 hover:text-blue-600 rounded-xl flex items-center justify-center transition shadow-sm border border-gray-100 flex-shrink-0" title="Редактировать товар">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                        </Link>
+                    </div>
+
                     <h1 class="text-2xl md:text-3xl font-black text-gray-900 mb-6 leading-tight">{{ product.title }}</h1>
 
                     <div class="flex items-end gap-4 mb-8">

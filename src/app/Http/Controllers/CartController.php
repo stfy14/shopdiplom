@@ -23,19 +23,27 @@ class CartController extends Controller
 
     public function add(Product $product)
     {
+        if ($product->is_deleted || $product->quantity <= 0) {
+            return back()->withErrors(['cart' => 'Товар недоступен или нет в наличии.']);
+        }
+
         $cartItem = Cart::where('user_id', auth()->id())
             ->where('product_id', $product->id)
             ->first();
 
+        $currentInCart = $cartItem ? $cartItem->quantity : 0;
+
+        if ($currentInCart >= $product->quantity) {
+            return back()->withErrors(['cart' => 'Вы уже добавили максимально доступное количество товара.']);
+        }
+
         if ($cartItem) {
-            // Если товар уже есть в корзине, просто увеличиваем количество на 1
             $cartItem->increment('quantity');
         } else {
-            // Если товара нет, создаем новую запись с количеством 1
             Cart::create([
-                'user_id' => auth()->id(),
+                'user_id'    => auth()->id(),
                 'product_id' => $product->id,
-                'quantity' => 1,
+                'quantity'   => 1,
             ]);
         }
 
@@ -44,7 +52,16 @@ class CartController extends Controller
 
     public function update(Product $product, Request $request)
     {
-        $request->validate(['quantity' => 'required|integer|min:1']);
+        $request->validate([
+            'quantity' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:' . $product->quantity,
+            ],
+        ], [
+            'quantity.max' => 'На складе доступно только ' . $product->quantity . ' шт.',
+        ]);
 
         Cart::where('user_id', auth()->id())
             ->where('product_id', $product->id)
@@ -67,8 +84,8 @@ class CartController extends Controller
         Cart::where('user_id', auth()->id())
             ->where('product_id', $product->id)
             ->update([
-                'old_price' => null,
-                'price_change_reason' => null
+                'old_price'           => null,
+                'price_change_reason' => null,
             ]);
 
         return back();

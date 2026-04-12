@@ -21,7 +21,7 @@ class OrderController extends Controller
         if ($items->isEmpty()) return redirect()->route('cart.index');
 
         $total = $items->sum(fn($i) => ($i->product->price_with_discount ?? 0) * $i->quantity);
-        return Inertia::render('Shop/Checkout',['items' => $items, 'total' => $total]);
+        return Inertia::render('Shop/Checkout', ['items' => $items, 'total' => $total]);
     }
 
     public function store(Request $request)
@@ -31,11 +31,26 @@ class OrderController extends Controller
             'street'  => 'required|string|max:255',
             'house'   => 'required|string|max:50',
             'comment' => 'nullable|string|max:1000',
-            'phone'   =>['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
+            'phone'   => ['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
         ]);
 
         $items = Cart::with('product')->where('user_id', auth()->id())->get();
         if ($items->isEmpty()) return back();
+
+        // Validate stock availability for every cart item
+        foreach ($items as $item) {
+            if (!$item->product || $item->product->is_deleted) {
+                return back()->withErrors([
+                    'stock' => "Товар «" . ($item->product?->title ?? 'ID ' . $item->product_id) . "» больше не доступен.",
+                ]);
+            }
+            if ($item->quantity > $item->product->quantity) {
+                $available = $item->product->quantity;
+                return back()->withErrors([
+                    'stock' => "Товара «{$item->product->title}» доступно только {$available} шт. (в корзине: {$item->quantity} шт.). Пожалуйста, обновите корзину.",
+                ]);
+            }
+        }
 
         $total = $items->sum(fn($i) => ($i->product->price_with_discount ?? 0) * $i->quantity);
 
@@ -62,9 +77,8 @@ class OrderController extends Controller
 
         Cart::where('user_id', auth()->id())->delete();
 
-        // СОЗДАЕМ УВЕДОМЛЕНИЕ ДЛЯ АДМИНОВ
         $fmt = number_format($order->total_price, 0, '', ' ');
-        \App\Models\User::where('role', 'admin')->get()->each(function($admin) use($order, $fmt) {
+        \App\Models\User::where('role', 'admin')->get()->each(function ($admin) use ($order, $fmt) {
             $admin->notify(new AppNotification("Новый заказ #{$order->id} на {$fmt} ₽", 'success', "/admin/orders/{$order->id}", 'order'));
         });
 
@@ -76,21 +90,20 @@ class OrderController extends Controller
     {
         $order = Order::with(['items.product', 'messages'])->where('uuid', $uuid)->firstOrFail();
         if ($order->user_id !== auth()->id()) abort(403);
-        
+
         return Inertia::render('Shop/Order', ['order' => $order]);
     }
 
     public function cancel(Order $order)
     {
         if ($order->user_id !== auth()->id() || !in_array($order->status, ['new', 'processing'])) abort(403);
-        
+
         $order->update(['status' => 'cancelled_by_user']);
         foreach ($order->items as $item) {
             $item->product->increment('quantity', $item->quantity);
         }
 
-        // УВЕДОМЛЕНИЕ АДМИНУ ОБ ОТМЕНЕ
-        \App\Models\User::where('role', 'admin')->get()->each(function($admin) use($order) {
+        \App\Models\User::where('role', 'admin')->get()->each(function ($admin) use ($order) {
             $admin->notify(new AppNotification("Заказ #{$order->id} отменён клиентом", 'error', "/admin/orders/{$order->id}", 'cancel'));
         });
 
@@ -104,7 +117,7 @@ class OrderController extends Controller
         return response()->json($order->messages()->oldest()->get());
     }
 
-public function sendMessage(Order $order, Request $request)
+    public function sendMessage(Order $order, Request $request)
     {
         if ($order->user_id !== auth()->id()) abort(403);
         $request->validate(['message' => 'required|string']);
@@ -115,14 +128,11 @@ public function sendMessage(Order $order, Request $request)
             'message'     => $request->message,
         ]);
 
-        // УВЕДОМЛЕНИЕ АДМИНУ О НОВОМ СООБЩЕНИИ В БД
-        \App\Models\User::where('role', 'admin')->get()->each(function($admin) use($order) {
+        \App\Models\User::where('role', 'admin')->get()->each(function ($admin) use ($order) {
             $admin->notify(new \App\Notifications\AppNotification("Новое сообщение от клиента в заказе #{$order->id}", 'success', "/admin/orders/{$order->id}", 'message'));
         });
 
         broadcast(new NewOrderMessage($message));
-        
-        // --- ДОБАВИТЬ ВОТ ЭТУ СТРОКУ ---
         broadcast(new OrderUpdated($order, 'new_message'));
 
         return response()->json($message);
@@ -136,7 +146,7 @@ public function sendMessage(Order $order, Request $request)
             'street'  => 'required|string|max:255',
             'house'   => 'required|string|max:50',
             'comment' => 'nullable|string|max:1000',
-            'phone'   =>['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
+            'phone'   => ['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
         ]);
 
         $order->update(array_merge(
@@ -144,8 +154,7 @@ public function sendMessage(Order $order, Request $request)
             ['has_unseen_activity' => true]
         ));
 
-        // УВЕДОМЛЕНИЕ АДМИНУ
-        \App\Models\User::where('role', 'admin')->get()->each(function($admin) use($order) {
+        \App\Models\User::where('role', 'admin')->get()->each(function ($admin) use ($order) {
             $admin->notify(new AppNotification("Клиент обновил контакты в заказе #{$order->id}", 'success', "/admin/orders/{$order->id}", 'edit'));
         });
 
@@ -160,8 +169,8 @@ public function sendMessage(Order $order, Request $request)
 
         if ($order->user_has_unseen_status_change || $order->user_has_unseen_contact_update) {
             $order->update([
-                'user_has_unseen_status_change' => false,
-                'user_has_unseen_contact_update' => false
+                'user_has_unseen_status_change'  => false,
+                'user_has_unseen_contact_update' => false,
             ]);
             $needsBroadcast = true;
         }

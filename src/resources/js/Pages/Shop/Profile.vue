@@ -1,19 +1,36 @@
 <script setup>
 import ShopLayout from '@/Layouts/ShopLayout.vue'
 import { Link } from '@inertiajs/vue3'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
     orders: Array,
     user: Object,
 })
 
+const activeTab = ref('active')
+
 const statusMap = {
     new:               { label: 'Ждём подтверждения', color: 'bg-blue-100 text-blue-700' },
     processing:        { label: 'В обработке',        color: 'bg-yellow-100 text-yellow-700' },
     shipped:           { label: 'Отправлен',          color: 'bg-green-100 text-green-700' },
+    completed:         { label: 'Завершён',           color: 'bg-emerald-100 text-emerald-700' },
     cancelled:         { label: 'Отменён',            color: 'bg-red-100 text-red-700' },
     cancelled_by_user: { label: 'Отменён вами',       color: 'bg-gray-100 text-gray-700' },
 }
+
+const filteredOrders = computed(() => {
+    if (activeTab.value === 'active') {
+        return props.orders.filter(o => ['new', 'processing', 'shipped'].includes(o.status))
+    }
+    if (activeTab.value === 'completed') {
+        return props.orders.filter(o => o.status === 'completed')
+    }
+    if (activeTab.value === 'cancelled') {
+        return props.orders.filter(o => ['cancelled', 'cancelled_by_user'].includes(o.status))
+    }
+    return props.orders
+})
 
 function formatPrice(price) { return new Intl.NumberFormat('ru-RU').format(price) }
 function formatDate(dt) {
@@ -27,7 +44,7 @@ function formatDate(dt) {
 <template>
     <ShopLayout>
         <div class="max-w-5xl mx-auto">
-            <!-- User card: исправлена вёрстка кнопок для мобильных экранов -->
+            <!-- User card -->
             <div class="bg-white rounded-2xl shadow-sm p-5 sm:p-6 mb-6 flex flex-col sm:flex-row sm:items-center gap-5 border border-gray-100">
                 <div class="flex items-center gap-4">
                     <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-2xl flex-shrink-0">👤</div>
@@ -45,7 +62,35 @@ function formatDate(dt) {
 
             <h2 class="font-black text-xl mb-4 text-gray-900">Мои заказы</h2>
 
-            <div v-if="orders.length > 0">
+            <!-- Вкладки (дизайн 1-в-1 как в Admin/Orders) -->
+            <div class="flex sm:inline-flex w-full sm:w-auto mb-6 p-1 bg-white border border-gray-100 rounded-xl shadow-sm">
+                <button
+                    @click="activeTab = 'active'"
+                    :class="['flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-lg text-sm font-bold transition',
+                             activeTab === 'active' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50']"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3"/></svg>
+                    Активные
+                </button>
+                <button
+                    @click="activeTab = 'completed'"
+                    :class="['flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-lg text-sm font-bold transition',
+                             activeTab === 'completed' ? 'bg-emerald-500 text-white' : 'text-gray-500 hover:text-emerald-600 hover:bg-emerald-50']"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Завершённые
+                </button>
+                <button
+                    @click="activeTab = 'cancelled'"
+                    :class="['flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-lg text-sm font-bold transition',
+                             activeTab === 'cancelled' ? 'bg-red-500 text-white' : 'text-gray-500 hover:text-red-500 hover:bg-red-50']"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Отменённые
+                </button>
+            </div>
+
+            <div v-if="filteredOrders.length > 0">
                 <div class="hidden md:grid grid-cols-12 gap-4 px-5 text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
                     <div class="col-span-2">Заказ</div>
                     <div class="col-span-5">Контакты</div>
@@ -55,7 +100,7 @@ function formatDate(dt) {
 
                 <div class="flex flex-col gap-3">
                     <Link
-                        v-for="order in orders"
+                        v-for="order in filteredOrders"
                         :key="order.id"
                         :href="`/orders/${order.uuid}`"
                         class="relative bg-white rounded-2xl border border-gray-100 group shadow-sm
@@ -106,8 +151,12 @@ function formatDate(dt) {
 
             <div v-else class="text-center py-16 text-gray-400 bg-white rounded-3xl border border-gray-100 shadow-sm">
                 <div class="text-5xl mb-3">📦</div>
-                <div class="font-bold text-gray-500">У вас пока нет заказов</div>
-                <Link href="/" class="mt-4 inline-block px-6 py-2.5 font-bold bg-blue-600 text-white rounded-xl text-sm hover:bg-blue-700 transition">
+                <div class="font-bold text-gray-500">
+                    <template v-if="activeTab === 'active'">Активных заказов нет</template>
+                    <template v-else-if="activeTab === 'completed'">Завершённых заказов нет</template>
+                    <template v-else>Отменённых заказов нет</template>
+                </div>
+                <Link v-if="activeTab === 'active'" href="/" class="mt-4 inline-block px-6 py-2.5 font-bold bg-blue-600 text-white rounded-xl text-sm hover:bg-blue-700 transition">
                     Перейти в каталог
                 </Link>
             </div>

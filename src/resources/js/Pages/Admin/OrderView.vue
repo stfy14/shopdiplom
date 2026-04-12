@@ -55,7 +55,6 @@ function updateStatus() {
 const sortedMessages = computed(() => [...messages.value].sort((a, b) => a.id - b.id))
 const isAtBottom = ref(true)
 const unreadCount = ref(0)
-const isExpanded = ref(false)
 
 function handleScroll() {
     if (!chatBox.value) return
@@ -93,23 +92,15 @@ function formatTime(dt) { return new Date(dt).toLocaleTimeString('ru-RU', { hour
 function sendMessage() {
     if (!messageText.value.trim() || isSending.value) return
     const text = messageText.value
-    messageText.value = ''; 
+    messageText.value = '';
     isSending.value = true;
-    
-    // Сбрасываем высоту всех полей чата после отправки
     document.querySelectorAll('textarea').forEach(ta => ta.style.height = '44px');
 
     const tempId = 'temp_' + Date.now()
-    const role = window.location.pathname.includes('admin') ? 'admin' : 'user';
-    
-    messages.value.push({ id: tempId, message: text, sender_role: role, created_at: new Date().toISOString(), isTemp: true })
+    messages.value.push({ id: tempId, message: text, sender_role: 'admin', created_at: new Date().toISOString(), isTemp: true })
     nextTick(() => scrollToBottom())
-    
-    const url = window.location.pathname.includes('admin') 
-        ? `/admin/orders/${props.order.id}/messages` 
-        : `/orders/${props.order.id}/messages`;
 
-    axios.post(url, { message: text })
+    axios.post(`/admin/orders/${props.order.id}/messages`, { message: text })
         .then(res => { isSending.value = false; const i = messages.value.findIndex(m => m.id === tempId); if (i !== -1) messages.value[i] = res.data; })
         .catch(() => { isSending.value = false; const i = messages.value.findIndex(m => m.id === tempId); if (i !== -1) messages.value.splice(i, 1); messageText.value = text; toast.error('Ошибка отправки'); })
 }
@@ -131,12 +122,22 @@ onUnmounted(() => { window.Echo.leave(`private-order.${props.order.id}`) })
 watch(() => props.order.status, (s) => { statusForm.status = s })
 
 const statusMap = {
-    new: { label: 'Новый' }, processing: { label: 'В обработке' },
-    shipped: { label: 'Отправлен' }, cancelled: { label: 'Отмена (Маг.)' },
+    new:               { label: 'Новый' },
+    processing:        { label: 'В обработке' },
+    shipped:           { label: 'Отправлен' },
+    completed:         { label: 'Завершён' },
+    cancelled:         { label: 'Отмена (Маг.)' },
     cancelled_by_user: { label: 'Отмена (Клиент)' },
 }
 const st = computed(() => {
-    const colorMap = { new: 'bg-blue-100 text-blue-700', processing: 'bg-yellow-100 text-yellow-700', shipped: 'bg-green-100 text-green-700', cancelled: 'bg-red-100 text-red-700', cancelled_by_user: 'bg-gray-100 text-gray-700' };
+    const colorMap = {
+        new:               'bg-blue-100 text-blue-700',
+        processing:        'bg-yellow-100 text-yellow-700',
+        shipped:           'bg-green-100 text-green-700',
+        completed:         'bg-emerald-100 text-emerald-700',
+        cancelled:         'bg-red-100 text-red-700',
+        cancelled_by_user: 'bg-gray-100 text-gray-700',
+    };
     return { label: statusMap[props.order.status]?.label ?? props.order.status, color: colorMap[props.order.status] ?? 'bg-gray-100 text-gray-600' };
 });
 </script>
@@ -166,15 +167,12 @@ const st = computed(() => {
                     <span class="text-xs text-gray-400 uppercase font-black tracking-wider">Статус заказа</span>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3 relative">
-                    
                     <div v-if="isSelectOpen" @click="isSelectOpen = false" class="fixed inset-0 z-10"></div>
-                    
                     <div class="relative flex-grow z-20">
                         <button @click="isSelectOpen = !isSelectOpen" type="button" class="w-full h-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-bold transition shadow-sm flex items-center justify-between text-gray-800">
                             <span class="truncate">{{ statusMap[statusForm.status]?.label }}</span>
                             <svg :class="['w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0', isSelectOpen ? 'rotate-180' : '']" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                         </button>
-
                         <transition enter-active-class="transition duration-100 ease-out" enter-from-class="transform scale-95 opacity-0" enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-75 ease-in" leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
                             <div v-if="isSelectOpen" class="absolute z-10 w-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
                                 <button v-for="(data, code) in statusMap" :key="code" @click="statusForm.status = code; isSelectOpen = false" type="button" :class="['w-full text-left px-4 py-2.5 text-sm font-bold transition flex items-center justify-between', statusForm.status === code ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50']">
@@ -184,7 +182,6 @@ const st = computed(() => {
                             </div>
                         </transition>
                     </div>
-
                     <button @click="updateStatus" :disabled="statusForm.processing" class="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-sm disabled:opacity-50 whitespace-nowrap z-0 relative">
                         Обновить статус
                     </button>
@@ -202,7 +199,6 @@ const st = computed(() => {
                         Правка
                     </button>
                 </div>
-                
                 <div>
                     <div class="flex items-center gap-4 mb-6">
                         <div class="w-11 h-11 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -213,13 +209,11 @@ const st = computed(() => {
                             <div class="text-sm text-gray-400 font-medium">ID: {{ order.user?.id }}</div>
                         </div>
                     </div>
-                    
                     <div v-if="!editingContacts">
                         <div class="font-black text-gray-900 text-lg mb-1">{{ order.phone }}</div>
                         <div class="text-gray-600 text-sm font-medium">г. {{ order.city }}, ул. {{ order.street }}, д. {{ order.house }}</div>
                         <div v-if="order.comment" class="text-sm text-gray-600 mt-3 p-3 bg-gray-50 rounded-xl border-l-4 border-l-yellow-400 italic">«{{ order.comment }}»</div>
                     </div>
-                    
                     <div v-else class="space-y-4">
                         <div>
                             <label class="block text-[11px] font-black text-gray-400 uppercase tracking-wider mb-1.5 ml-1">Телефон</label>
@@ -285,7 +279,6 @@ const st = computed(() => {
                     </div>
                 </div>
             </div>
-
         </div>
 
         <!-- ПРАВЫЙ БЛОК — чат (Десктоп) -->
@@ -299,7 +292,6 @@ const st = computed(() => {
                     <div class="text-[11px] text-gray-400 font-bold uppercase tracking-wide mt-0.5">{{ order.user?.name }}</div>
                 </div>
             </div>
-
             <div class="flex-grow overflow-y-auto p-5 bg-gray-50/50 flex flex-col gap-3 relative" ref="chatBox" @scroll="handleScroll">
                 <div v-if="messages.length === 0" class="text-center text-gray-400 text-sm font-medium my-auto">История сообщений пуста</div>
                 <div v-for="msg in sortedMessages" :key="msg.id"
@@ -314,8 +306,6 @@ const st = computed(() => {
                     <span v-if="unreadCount > 0" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full">{{ unreadCount }}</span>
                 </button>
             </div>
-
-            <!-- Ввод: items-stretch растягивает кнопку по высоте -->
             <div class="p-3 bg-white border-t border-gray-100 flex-shrink-0">
                 <div class="relative flex items-stretch bg-white border border-gray-200 rounded-xl shadow-sm focus-within:border-yellow-400 focus-within:ring-1 focus-within:ring-yellow-400 transition-all">
                     <textarea v-model="messageText" @input="resizeTextarea" @keydown="handleEnter"
@@ -348,7 +338,6 @@ const st = computed(() => {
                 </div>
             </div>
             <div class="p-3 bg-white border-t border-gray-100 flex-shrink-0">
-                <!-- Ввод: items-stretch растягивает кнопку по высоте -->
                 <div class="relative flex items-stretch bg-white border border-gray-200 rounded-xl shadow-sm focus-within:border-yellow-400 focus-within:ring-1 focus-within:ring-yellow-400 transition-all">
                     <textarea v-model="messageText" @input="resizeTextarea" @keydown="handleEnter" placeholder="Ваше сообщение..." rows="1"
                         class="flex-grow bg-transparent border-0 outline-none focus:ring-0 text-[15px] py-[10px] px-4 font-medium resize-none leading-[24px] block rounded-xl"

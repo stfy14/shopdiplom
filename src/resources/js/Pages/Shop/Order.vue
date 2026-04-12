@@ -132,9 +132,11 @@ const statusMap = {
     new:               { label: 'Новый',          color: 'bg-blue-100 text-blue-700' },
     processing:        { label: 'В обработке',     color: 'bg-yellow-100 text-yellow-700' },
     shipped:           { label: 'Отправлен',       color: 'bg-green-100 text-green-700' },
+    completed:         { label: 'Завершён',        color: 'bg-emerald-100 text-emerald-700' },
     cancelled:         { label: 'Отменён',         color: 'bg-red-100 text-red-700' },
     cancelled_by_user: { label: 'Отменён вами',    color: 'bg-gray-100 text-gray-700' },
 }
+
 const st = computed(() => statusMap[props.order.status] ?? { label: props.order.status, color: 'bg-gray-100 text-gray-600' })
 function formatPrice(p) { return new Intl.NumberFormat('ru-RU').format(p) }
 function formatTime(dt) { return new Date(dt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) }

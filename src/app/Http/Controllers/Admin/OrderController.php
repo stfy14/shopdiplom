@@ -15,13 +15,16 @@ class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        $tab = $request->get('tab', 'active');
+        $tab   = $request->get('tab', 'active');
         $query = Order::with('user')->withCount('unreadMessages')->latest();
 
         if ($tab === 'archive') {
             $query->whereIn('status', ['cancelled', 'cancelled_by_user']);
+        } elseif ($tab === 'completed') {
+            $query->where('status', 'completed');
         } else {
-            $query->whereNotIn('status', ['cancelled', 'cancelled_by_user']);
+            // active: everything except cancelled and completed
+            $query->whereNotIn('status', ['cancelled', 'cancelled_by_user', 'completed']);
         }
 
         return inertia('Admin/Orders', ['orders' => $query->get(), 'tab' => $tab]);
@@ -43,23 +46,40 @@ class OrderController extends Controller
         if ($needsBroadcast) broadcast(new OrderUpdated($order, 'read'));
 
         $order->load(['user', 'items.product', 'messages']);
-        return Inertia::render('Admin/OrderView',['order' => $order]);
+        return Inertia::render('Admin/OrderView', ['order' => $order]);
     }
 
     public function updateStatus(Order $order, Request $request)
     {
-        $request->validate(['status' => 'required|in:new,processing,shipped,cancelled,cancelled_by_user']);
+        $request->validate(['status' => 'required|in:new,processing,shipped,cancelled,cancelled_by_user,completed']);
+
+        // Restore stock if order is being cancelled by admin
+        if (in_array($request->status, ['cancelled']) && !in_array($order->status, ['cancelled', 'cancelled_by_user'])) {
+            foreach ($order->items as $item) {
+                $item->product->increment('quantity', $item->quantity);
+            }
+        }
+
         $order->update([
             'status'                        => $request->status,
             'user_has_unseen_status_change' => true,
         ]);
 
-        $label =[
-            'new' => 'Новый', 'processing' => 'В обработке', 'shipped' => 'Отправлен', 
-            'cancelled' => 'Отменён', 'cancelled_by_user' => 'Отменён клиентом'
+        $label = [
+            'new'               => 'Новый',
+            'processing'        => 'В обработке',
+            'shipped'           => 'Отправлен',
+            'completed'         => 'Завершён',
+            'cancelled'         => 'Отменён',
+            'cancelled_by_user' => 'Отменён клиентом',
         ][$request->status] ?? $request->status;
 
-        $order->user->notify(new AppNotification("Заказ #{$order->id}: статус изменён на «{$label}»", 'success', "/orders/{$order->uuid}", 'status'));
+        $order->user->notify(new AppNotification(
+            "Заказ #{$order->id}: статус изменён на «{$label}»",
+            'success',
+            "/orders/{$order->uuid}",
+            'status'
+        ));
 
         broadcast(new OrderUpdated($order, 'status_change'));
         return response()->json(['success' => true]);
@@ -80,11 +100,14 @@ class OrderController extends Controller
             'message'     => $request->message,
         ]);
 
-        $order->user->notify(new \App\Notifications\AppNotification("Новый ответ от поддержки по заказу #{$order->id}", 'success', "/orders/{$order->uuid}", 'message'));
+        $order->user->notify(new \App\Notifications\AppNotification(
+            "Новый ответ от поддержки по заказу #{$order->id}",
+            'success',
+            "/orders/{$order->uuid}",
+            'message'
+        ));
 
         broadcast(new NewOrderMessage($message));
-        
-        // ДОБАВЛЕНА ЭТА СТРОКА:
         broadcast(new OrderUpdated($order, 'new_message'));
 
         return response()->json($message);
@@ -97,14 +120,20 @@ class OrderController extends Controller
             'street'  => 'required|string|max:255',
             'house'   => 'required|string|max:50',
             'comment' => 'nullable|string|max:1000',
-            'phone'   =>['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
+            'phone'   => ['required', 'string', 'regex:/^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/'],
         ]);
 
         $order->update(array_merge(
-            $request->only(['city', 'street', 'house', 'comment', 'phone']),['user_has_unseen_contact_update' => true]
+            $request->only(['city', 'street', 'house', 'comment', 'phone']),
+            ['user_has_unseen_contact_update' => true]
         ));
 
-        $order->user->notify(new AppNotification("Менеджер обновил контакты заказа #{$order->id}", 'success', "/orders/{$order->uuid}", 'edit'));
+        $order->user->notify(new AppNotification(
+            "Менеджер обновил контакты заказа #{$order->id}",
+            'success',
+            "/orders/{$order->uuid}",
+            'edit'
+        ));
 
         broadcast(new OrderUpdated($order, 'contacts_updated_by_admin'));
         return response()->json(['success' => true]);

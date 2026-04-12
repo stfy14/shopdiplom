@@ -2,7 +2,7 @@
 import { router } from '@inertiajs/vue3'
 
 const props = defineProps({ notifications: { type: Array, required: true } })
-const emit = defineEmits(['remove', 'remove-all'])
+const emit = defineEmits(['remove', 'remove-all', 'close'])
 
 function navigate(n) {
     if (!n.href) return
@@ -36,21 +36,21 @@ function iconPath(n) { return iconPaths[n.icon] ?? (n.type === 'error' ? iconPat
 </script>
 
 <template>
-    <div class="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-[calc(100vw-32px)] sm:w-[380px] bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 overflow-hidden z-50 flex flex-col">
+    <div class="fixed sm:absolute left-4 right-4 top-[76px] sm:inset-auto sm:top-full sm:right-0 sm:mt-4 sm:w-[380px] bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 overflow-hidden flex flex-col cursor-default" @click.stop>
 
         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-50 flex-shrink-0 bg-white z-10">
             <span class="font-black text-gray-900 text-[15px] tracking-tight">Уведомления</span>
-            <button v-if="notifications.length > 0" @click.stop="emit('remove-all')" class="text-xs font-bold text-gray-400 hover:text-red-500 transition px-2.5 py-1.5 rounded-lg hover:bg-red-50">
-                Очистить всё
-            </button>
+            <div class="flex items-center gap-1.5">
+                <button v-if="notifications.length > 0" @click.stop="emit('remove-all')" class="text-xs font-bold text-gray-400 hover:text-red-500 transition px-2.5 py-1.5 rounded-lg hover:bg-red-50">
+                    Очистить всё
+                </button>
+                <button @click="emit('close')" class="text-gray-400 hover:text-red-500 transition-colors w-8 h-8 flex items-center justify-center rounded-xl hover:bg-red-50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
         </div>
 
-        <!-- БЕЗ инлайновых вычислений высоты. Только max-h для скролла -->
-<!-- Добавили grid к родительскому контейнеру -->
         <div class="bg-gray-50/30 relative overflow-y-auto overflow-x-hidden max-h-[420px] grid">
-            
-            <!-- ЗАГЛУШКА -->
-            <!-- Добавили: col-start-1 row-start-1 self-start w-full -->
             <Transition name="empty-state">
                 <div v-if="notifications.length === 0" class="col-start-1 row-start-1 self-start w-full grid-collapse-wrapper">
                     <div class="grid-collapse-inner">
@@ -67,8 +67,6 @@ function iconPath(n) { return iconPaths[n.icon] ?? (n.type === 'error' ? iconPat
                 </div>
             </Transition>
             
-            <!-- СПИСОК УВЕДОМЛЕНИЙ -->
-            <!-- Добавили: col-start-1 row-start-1 self-start -->
             <TransitionGroup name="notif" tag="div" class="col-start-1 row-start-1 self-start relative flex flex-col w-full z-10">
                 <div v-for="n in notifications" :key="n.id" class="grid-collapse-wrapper relative">
                     <div class="grid-collapse-inner notif-swipe">
@@ -103,68 +101,20 @@ function iconPath(n) { return iconPaths[n.icon] ?? (n.type === 'error' ? iconPat
 </template>
 
 <style scoped>
-/* =========================================
-   ЯДРО МАГИИ: Плавное схлопывание высоты
-========================================== */
-.grid-collapse-wrapper {
-    display: grid;
-    grid-template-rows: 1fr;
-}
-.grid-collapse-inner {
-    min-height: 0;
-    overflow: hidden;
-}
+.grid-collapse-wrapper { display: grid; grid-template-rows: 1fr; }
+.grid-collapse-inner { min-height: 0; overflow: hidden; }
+.grid-collapse-wrapper:last-child .notif-card { border-bottom-width: 0; }
 
-/* Убираем нижнюю границу у самого последнего элемента в списке */
-.grid-collapse-wrapper:last-child .notif-card {
-    border-bottom-width: 0;
+.empty-state-enter-active, .empty-state-leave-active {
+    transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
+.empty-state-enter-from, .empty-state-leave-to { grid-template-rows: 0fr; opacity: 0; }
 
-
-/* =========================================
-   АНИМАЦИЯ: Заглушки "Всё чисто"
-========================================== */
-.empty-state-enter-active,
-.empty-state-leave-active {
-    transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+.notif-move, .notif-enter-active, .notif-leave-active {
+    transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.empty-state-enter-from,
-.empty-state-leave-to {
-    grid-template-rows: 0fr;
-    opacity: 0;
-}
-
-
-/* =========================================
-   АНИМАЦИЯ: Уведомлений (высота + прозрачность + сдвиг)
-========================================== */
-.notif-move,
-.notif-enter-active,
-.notif-leave-active {
-    /* Добавили transform для плавного сдвига (FLIP-анимация) */
-    transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.notif-enter-from,
-.notif-leave-to {
-    grid-template-rows: 0fr;
-    opacity: 0;
-}
-
-/* =========================================
-   АНИМАЦИЯ: Физический свайп внутри уведомления
-========================================== */
-.notif-swipe {
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-/* При появлении падает сверху вниз */
-.notif-enter-from .notif-swipe {
-    transform: translateY(-20px);
-}
-/* При удалении уезжает влево */
-.notif-leave-to .notif-swipe {
-    transform: translateX(-100%);
-}
+.notif-enter-from, .notif-leave-to { grid-template-rows: 0fr; opacity: 0; }
+.notif-swipe { transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+.notif-enter-from .notif-swipe { transform: translateY(-20px); }
+.notif-leave-to .notif-swipe { transform: translateX(-100%); }
 </style>

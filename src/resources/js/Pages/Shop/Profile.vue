@@ -27,24 +27,25 @@ function formatDate(dt) {
 <template>
     <ShopLayout>
         <div class="max-w-5xl mx-auto">
-            <!-- User card -->
-            <div class="bg-white rounded-2xl shadow-sm p-6 mb-6 flex items-center gap-4 border border-gray-100">
-                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-2xl">👤</div>
-                <div>
-                    <div class="font-bold text-xl">{{ user.name }}</div>
-                    <div class="text-gray-400 text-sm">{{ user.email }}</div>
-                    <span v-if="user.role === 'admin'" class="text-xs bg-gray-900 text-white px-2 py-0.5 rounded-full mt-1 inline-block">Администратор</span>
+            <!-- User card: исправлена вёрстка кнопок для мобильных экранов -->
+            <div class="bg-white rounded-2xl shadow-sm p-5 sm:p-6 mb-6 flex flex-col sm:flex-row sm:items-center gap-5 border border-gray-100">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-2xl flex-shrink-0">👤</div>
+                    <div class="min-w-0">
+                        <div class="font-bold text-xl truncate">{{ user.name }}</div>
+                        <div class="text-gray-400 text-sm truncate">{{ user.email }}</div>
+                        <span v-if="user.role === 'admin'" class="text-xs bg-gray-900 text-white px-2.5 py-1 rounded-lg mt-1.5 inline-block font-bold">Администратор</span>
+                    </div>
                 </div>
-                <div class="ml-auto flex gap-2">
-                    <Link v-if="user.role === 'admin'" href="/admin" class="px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-700 transition">Панель управления</Link>
-                    <Link href="/logout" method="post" as="button" class="px-4 py-2 border border-gray-200 text-gray-500 rounded-xl text-sm hover:bg-gray-50 transition">Выйти</Link>
+                <div class="sm:ml-auto flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <Link v-if="user.role === 'admin'" href="/admin" class="w-full sm:w-auto text-center px-5 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition">Панель управления</Link>
+                    <Link href="/logout" method="post" as="button" class="w-full sm:w-auto text-center px-5 py-2.5 border border-gray-200 text-gray-600 font-bold rounded-xl text-sm hover:bg-gray-50 transition">Выйти</Link>
                 </div>
             </div>
 
-            <h2 class="font-bold text-xl mb-4 text-gray-800">Мои заказы</h2>
+            <h2 class="font-black text-xl mb-4 text-gray-900">Мои заказы</h2>
 
             <div v-if="orders.length > 0">
-                <!-- Заголовок — только md+ -->
                 <div class="hidden md:grid grid-cols-12 gap-4 px-5 text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
                     <div class="col-span-2">Заказ</div>
                     <div class="col-span-5">Контакты</div>
@@ -62,7 +63,6 @@ function formatDate(dt) {
                                p-4 flex flex-col gap-2
                                md:grid md:grid-cols-12 md:gap-4 md:items-center md:flex-none"
                     >
-                        <!-- Заказ + сумма на мобильном -->
                         <div class="md:col-span-2 flex items-start justify-between md:block">
                             <div>
                                 <div class="font-black text-gray-900">#{{ order.id }}</div>
@@ -71,25 +71,21 @@ function formatDate(dt) {
                             <div class="md:hidden font-black text-gray-900 text-sm">{{ formatPrice(order.total_price) }} ₽</div>
                         </div>
 
-                        <!-- Контакты -->
                         <div class="md:col-span-5">
                             <div class="text-sm font-bold text-gray-800">{{ order.phone }}</div>
                             <div class="text-xs text-gray-500 truncate">г. {{ order.city }}, ул. {{ order.street }}, {{ order.house }}</div>
                         </div>
 
-                        <!-- Статус -->
                         <div class="md:col-span-3 md:flex md:justify-center">
                             <span :class="['inline-flex px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap', statusMap[order.status]?.color]">
                                 {{ statusMap[order.status]?.label }}
                             </span>
                         </div>
 
-                        <!-- Сумма — только md+ -->
                         <div class="hidden md:block md:col-span-2 font-black text-gray-900 whitespace-nowrap">
                             {{ formatPrice(order.total_price) }} ₽
                         </div>
 
-                        <!-- Иконки уведомлений -->
                         <div class="absolute -top-1.5 -right-1.5 flex items-center gap-1.5">
                             <div v-if="order.status === 'new'" class="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md border-2 border-white" title="Ждём подтверждения заказа">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -110,8 +106,8 @@ function formatDate(dt) {
 
             <div v-else class="text-center py-16 text-gray-400 bg-white rounded-3xl border border-gray-100 shadow-sm">
                 <div class="text-5xl mb-3">📦</div>
-                <div>У вас пока нет заказов</div>
-                <Link href="/" class="mt-4 inline-block px-6 py-2 bg-blue-600 text-white rounded-xl text-sm hover:bg-blue-700 transition">
+                <div class="font-bold text-gray-500">У вас пока нет заказов</div>
+                <Link href="/" class="mt-4 inline-block px-6 py-2.5 font-bold bg-blue-600 text-white rounded-xl text-sm hover:bg-blue-700 transition">
                     Перейти в каталог
                 </Link>
             </div>

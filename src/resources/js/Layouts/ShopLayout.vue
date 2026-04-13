@@ -230,8 +230,8 @@ watch(() => user.value, (newUser, oldUser) => {
                             </Link>
                         </template>
                         <template v-else>
-                            <Link href="/login" class="hidden sm:flex px-4 py-2.5 rounded-xl text-gray-600 text-sm font-bold hover:bg-gray-100 transition">Войти</Link>
-                            <Link href="/register" class="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 shadow-sm transition">Вход</Link>
+                            <Link href="/login" class="hidden sm:flex px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-bold transition">Войти</Link>
+                            <Link href="/register" class="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 shadow-sm transition">Регистрация</Link>
                         </template>
 
                         <!-- Плавающий поиск для мобильных -->

@@ -1,8 +1,8 @@
 FROM php:8.3-fpm
 
 RUN apt-get update && apt-get install -y \
-    git curl zip unzip libpq-dev libzip-dev \
-    && docker-php-ext-install pdo pdo_pgsql zip pcntl opcache \
+    git curl zip unzip libpq-dev libzip-dev libicu-dev \
+    && docker-php-ext-install pdo pdo_pgsql zip pcntl opcache intl \
     && pecl install redis \
     && docker-php-ext-enable redis
 

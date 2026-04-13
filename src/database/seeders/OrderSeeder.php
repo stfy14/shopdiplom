@@ -82,9 +82,13 @@ class OrderSeeder extends Seeder
         };
 
         // Получаем ID продуктов по названию
-        $pid = fn(string $title) => DB::table('products')
-            ->where('title', 'like', "%{$title}%")
-            ->value('id');
+        $pid = function(string $title) {
+            $id = DB::table('products')->whereRaw('title ILIKE ?', ["%{$title}%"])->value('id');
+            if ($id === null) {
+                throw new \Exception("Продукт не найден: '$title'");
+            }
+            return $id;
+        };
 
         $u1 = $users[0]->id; // Алексей Громов
         $u2 = $users[1]->id; // Марина Соколова
@@ -108,7 +112,7 @@ class OrderSeeder extends Seeder
         );
 
         $makeOrder($u2, 'Новосибирск', 'Красный проспект', '220', '+7 (383) 444-77-88', 'completed',
-            [$pid('HSC 2т') => 1, $pid('TOR тип Б') => 1],
+            [$pid('HSC 2т') => 1, $pid('тип Б') => 1],
             '',
             48,
             [

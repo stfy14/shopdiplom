@@ -108,7 +108,7 @@ class OrderSeeder extends Seeder
         );
 
         $makeOrder($u2, 'Новосибирск', 'Красный проспект', '220', '+7 (383) 444-77-88', 'completed',
-            [$pid('HSC 2т') => 1, $pid('тележки TOR тип Б') => 1],
+            [$pid('HSC 2т') => 1, $pid('TOR тип Б') => 1],
             '',
             48,
             [

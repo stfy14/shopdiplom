@@ -1,7 +1,7 @@
 <script setup>
 import ShopLayout from '@/Layouts/ShopLayout.vue'
 import { Link } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
     orders: Array,
@@ -9,6 +9,9 @@ const props = defineProps({
 })
 
 const activeTab = ref('active')
+const currentPage = ref(1)
+
+watch(activeTab, () => { currentPage.value = 1 })
 
 const statusMap = {
     new:               { label: 'Ждём подтверждения', color: 'bg-blue-100 text-blue-700' },
@@ -18,6 +21,10 @@ const statusMap = {
     cancelled:         { label: 'Отменён',            color: 'bg-red-100 text-red-700' },
     cancelled_by_user: { label: 'Отменён вами',       color: 'bg-gray-100 text-gray-700' },
 }
+
+const activeCount    = computed(() => props.orders.filter(o => ['new', 'processing', 'shipped'].includes(o.status)).length)
+const completedCount = computed(() => props.orders.filter(o => o.status === 'completed').length)
+const cancelledCount = computed(() => props.orders.filter(o => ['cancelled', 'cancelled_by_user'].includes(o.status)).length)
 
 const filteredOrders = computed(() => {
     if (activeTab.value === 'active') {
@@ -31,6 +38,13 @@ const filteredOrders = computed(() => {
     }
     return props.orders
 })
+
+const paginatedOrders = computed(() => {
+    const start = (currentPage.value - 1) * 10
+    return filteredOrders.value.slice(start, start + 10)
+})
+
+const totalPages = computed(() => Math.ceil(filteredOrders.value.length / 10))
 
 function formatPrice(price) { return new Intl.NumberFormat('ru-RU').format(price) }
 function formatDate(dt) {
@@ -66,27 +80,30 @@ function formatDate(dt) {
             <div class="flex sm:inline-flex flex-wrap gap-1 mb-6 p-1 bg-white border border-gray-100 rounded-xl shadow-sm">
                 <button
                     @click="activeTab = 'active'"
-                    :class="['flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-lg text-sm font-bold transition whitespace-nowrap',
+                    :class="['relative flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-lg text-sm font-bold transition whitespace-nowrap',
                             activeTab === 'active' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50']"
                 >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3"/></svg>
                     Активные
+                    <span v-if="activeCount > 0" class="absolute -top-2 -right-2 z-10 bg-red-500 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm border-2 border-white">{{ activeCount }}</span>
                 </button>
                 <button
                     @click="activeTab = 'completed'"
-                    :class="['flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-lg text-sm font-bold transition whitespace-nowrap',
+                    :class="['relative flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-lg text-sm font-bold transition whitespace-nowrap',
                             activeTab === 'completed' ? 'bg-emerald-500 text-white' : 'text-gray-500 hover:text-emerald-600 hover:bg-emerald-50']"
                 >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     Завершённые
+                    <span v-if="completedCount > 0" class="absolute -top-2 -right-2 z-10 bg-red-500 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm border-2 border-white">{{ completedCount }}</span>
                 </button>
                 <button
                     @click="activeTab = 'cancelled'"
-                    :class="['flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-lg text-sm font-bold transition whitespace-nowrap',
+                    :class="['relative flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-lg text-sm font-bold transition whitespace-nowrap',
                             activeTab === 'cancelled' ? 'bg-red-500 text-white' : 'text-gray-500 hover:text-red-500 hover:bg-red-50']"
                 >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     Отменённые
+                    <span v-if="cancelledCount > 0" class="absolute -top-2 -right-2 z-10 bg-red-500 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm border-2 border-white">{{ cancelledCount }}</span>
                 </button>
             </div>
 
@@ -100,7 +117,7 @@ function formatDate(dt) {
 
                 <div class="flex flex-col gap-3">
                     <Link
-                        v-for="order in filteredOrders"
+                        v-for="order in paginatedOrders"
                         :key="order.id"
                         :href="`/orders/${order.uuid}`"
                         class="relative bg-white rounded-2xl border border-gray-100 group shadow-sm
@@ -146,6 +163,19 @@ function formatDate(dt) {
                             </div>
                         </div>
                     </Link>
+                </div>
+
+                <!-- Пагинация -->
+                <div v-if="totalPages > 1" class="flex justify-center items-center gap-2 mt-4 mb-2">
+                    <button @click="currentPage--" :disabled="currentPage === 1" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 transition shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                    </button>
+                    <div class="text-sm font-bold text-gray-700 px-4">
+                        Страница {{ currentPage }} из {{ totalPages }}
+                    </div>
+                    <button @click="currentPage++" :disabled="currentPage === totalPages" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 transition shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </button>
                 </div>
             </div>
 

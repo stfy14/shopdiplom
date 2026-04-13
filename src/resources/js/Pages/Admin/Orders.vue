@@ -66,7 +66,7 @@ const totalPages = computed(() => Math.ceil(sortedOrders.value.length / 10))
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3"/></svg>
                 Активные
-                <span v-if="notificationCounts?.active > 0" class="ml-1.5 bg-white text-blue-600 text-xs font-black w-5 h-5 rounded-full flex items-center justify-center">
+                <span v-if="notificationCounts?.active > 0" class="absolute -top-2 -right-2 z-20 bg-red-500 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm border-2 border-white">
                     {{ notificationCounts.active }}
                 </span>
             </Link>
@@ -78,7 +78,7 @@ const totalPages = computed(() => Math.ceil(sortedOrders.value.length / 10))
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 Завершённые
-                <span v-if="notificationCounts?.completed > 0" class="ml-1.5 bg-white text-emerald-500 text-xs font-black w-5 h-5 rounded-full flex items-center justify-center">
+                <span v-if="notificationCounts?.completed > 0" class="absolute -top-2 -right-2 z-20 bg-red-500 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm border-2 border-white">
                     {{ notificationCounts.completed }}
                 </span>
             </Link>
@@ -90,7 +90,7 @@ const totalPages = computed(() => Math.ceil(sortedOrders.value.length / 10))
             >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 Архив
-                <span v-if="notificationCounts?.archive > 0" class="ml-1.5 bg-white text-red-500 text-xs font-black w-5 h-5 rounded-full flex items-center justify-center">
+                <span v-if="notificationCounts?.archive > 0" class="absolute -top-2 -right-2 z-20 bg-red-500 text-white text-[11px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-sm border-2 border-white">
                     {{ notificationCounts.archive }}
                 </span>
             </Link>

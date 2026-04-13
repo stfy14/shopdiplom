@@ -5,8 +5,9 @@ services:
       - ./src:/var/www:cached
     depends_on:
       - db
+      - redis
 
-  reverb:                    
+  reverb:
     build: .
     command: php artisan reverb:start --host=0.0.0.0 --port=6001
     volumes:
@@ -15,6 +16,7 @@ services:
       - "6001:6001"
     depends_on:
       - db
+      - redis
 
   nginx:
     image: nginx:alpine
@@ -37,6 +39,12 @@ services:
     ports:
       - "5432:5432"
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+
   node:
     image: node:20-alpine
     working_dir: /var/www
@@ -46,3 +54,4 @@ services:
 
 volumes:
   pgdata:
+  redisdata:

@@ -18,6 +18,7 @@ class OrderController extends Controller
         $tab   = $request->get('tab', 'active');
         $query = Order::with('user')->withCount('unreadMessages')->latest();
 
+        // --- Эта часть остаётся без изменений ---
         if ($tab === 'archive') {
             $query->whereIn('status', ['cancelled', 'cancelled_by_user']);
         } elseif ($tab === 'completed') {
@@ -27,9 +28,33 @@ class OrderController extends Controller
             $query->whereNotIn('status', ['cancelled', 'cancelled_by_user', 'completed']);
         }
 
-        return inertia('Admin/Orders', ['orders' => $query->get(), 'tab' => $tab]);
+        // --- НОВАЯ ЛОГИКА: Подсчёт уведомлений для всех вкладок ---
+        $getNotificationCount = function ($statuses) {
+            return Order::whereIn('status', $statuses)
+                ->where(function ($q) {
+                    $q->where('status', 'new') // Новый заказ
+                      ->orWhere('has_unseen_activity', true) // Клиент обновил данные
+                      ->orWhereHas('messages', function ($subQuery) { // Есть непрочитанные сообщения от клиента
+                          $subQuery->where('sender_role', 'user')->where('is_read', false);
+                      });
+                })
+                ->count();
+        };
+
+        $notificationCounts = [
+            'active'    => $getNotificationCount(['new', 'processing', 'shipped']),
+            'completed' => $getNotificationCount(['completed']),
+            'archive'   => $getNotificationCount(['cancelled', 'cancelled_by_user']),
+        ];
+
+        return inertia('Admin/Orders', [
+            'orders'             => $query->get(),
+            'tab'                => $tab,
+            'notificationCounts' => $notificationCounts, // Передаём счётчики на фронтенд
+        ]);
     }
 
+    // ... остальной код контроллера без изменений
     public function show(Order $order)
     {
         $needsBroadcast = false;

@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('categories', function (Blueprint $table) {
+            $table->foreignId('parent_id')
+                ->nullable()
+                ->after('id')
+                ->constrained('categories')
+                ->nullOnDelete();
+            $table->string('image')->nullable()->after('code');
+            $table->text('description')->nullable()->after('image');
+            $table->unsignedInteger('sort_order')->default(0)->after('description');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('categories', function (Blueprint $table) {
+            $table->dropConstrainedForeignId('parent_id');
+            $table->dropColumn(['image', 'description', 'sort_order']);
+        });
+    }
+};

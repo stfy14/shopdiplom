@@ -191,10 +191,10 @@ watch(() => user.value, (newUser, oldUser) => {
                     </Link>
 
                     <!-- Поиск (Десктоп) -->
-                    <form action="/" method="GET" class="hidden md:flex flex-1 max-w-xl mx-8 lg:mx-12">
+                    <form action="/search" method="GET" class="hidden md:flex flex-1 max-w-xl mx-8 lg:mx-12">
                         <div class="relative w-full flex items-center">
                             <svg class="absolute left-4 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                            <input type="search" name="q" placeholder="Поиск оборудования..." 
+                            <input type="search" name="q" placeholder="Поиск по сайту" 
                                 class="w-full pl-11 pr-4 py-2.5 bg-white rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm font-bold transition shadow-sm placeholder-gray-400"/>
                         </div>
                     </form>
@@ -237,7 +237,7 @@ watch(() => user.value, (newUser, oldUser) => {
                         <!-- Плавающий поиск для мобильных -->
                         <Transition name="popup-drop">
                             <div v-if="mobileSearchOpen" :class="activeWidget === 'search' ? 'z-50' : 'z-40'" class="fixed sm:hidden left-4 right-4 top-[76px] bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 p-2 cursor-default" @click.stop>
-                                <form action="/" method="GET" class="relative w-full flex items-center">
+                                <form action="/search" method="GET" class="relative w-full flex items-center">
                                     <svg class="absolute left-4 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                                     <input type="search" name="q" placeholder="Поиск оборудования..." 
                                         class="w-full pl-11 pr-4 py-3 bg-white rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-[15px] font-bold transition shadow-sm placeholder-gray-400"/>

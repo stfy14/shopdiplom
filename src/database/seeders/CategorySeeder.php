@@ -11,13 +11,110 @@ class CategorySeeder extends Seeder
     {
         DB::table('product_characteristics')->delete();
         DB::table('characteristics')->delete();
+        DB::table('products')->delete();
         DB::table('categories')->delete();
 
-        $categories = [
+        // ── Родительские категории ──────────────────────────────────────────
+        $parents = [
             [
-                'name' => 'Тали электрические',
-                'code' => 'electric-hoists',
-                'characteristics' => [
+                'name'        => 'Такелажное оборудование',
+                'code'        => 'rigging',
+                'description' => 'Профессиональное такелажное оборудование для строповки, крепления и натяжения грузов. Зажимы для каната, талрепы, стропы всех типов.',
+                'image'       => null,
+                'sort_order'  => 1,
+            ],
+            [
+                'name'        => 'Грузоподъёмное оборудование',
+                'code'        => 'lifting-equipment',
+                'description' => 'Тали, лебёдки, краны и кран-балки для подъёма и перемещения грузов на производстве, в цехах и на строительных объектах.',
+                'image'       => null,
+                'sort_order'  => 2,
+            ],
+            [
+                'name'        => 'Гидравлическое оборудование',
+                'code'        => 'hydraulic',
+                'description' => 'Гидравлические домкраты для подъёма автомобилей, оборудования и строительных конструкций. Бутылочные, подкатные, гаражные.',
+                'image'       => null,
+                'sort_order'  => 3,
+            ],
+            [
+                'name'        => 'Складское оборудование',
+                'code'        => 'warehouse',
+                'description' => 'Грузовые тележки, ходовые тележки для талей и кран-балок. Ручные и электрические модели для склада и производства.',
+                'image'       => null,
+                'sort_order'  => 4,
+            ],
+        ];
+
+        $parentIds = [];
+        foreach ($parents as $parent) {
+            $id = DB::table('categories')->insertGetId(array_merge($parent, [
+                'parent_id'  => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
+            $parentIds[$parent['code']] = $id;
+        }
+
+        // ── Дочерние категории с характеристиками ──────────────────────────
+        $children = [
+
+            // ── ТАКЕЛАЖ ──
+            [
+                'name'        => 'Зажимы для каната',
+                'code'        => 'clamps',
+                'parent'      => 'rigging',
+                'description' => 'Зажимы для стальных канатов и тросов. DIN 741, нержавеющие, пластинчатые. Диаметры 6–32 мм.',
+                'sort_order'  => 1,
+                'chars'       => [
+                    'Диаметр каната (мм)',
+                    'Тип зажима',
+                    'Материал',
+                    'Разрывная нагрузка (кН)',
+                    'Кол-во в упаковке (шт)',
+                    'Вес единицы (кг)',
+                ],
+            ],
+            [
+                'name'        => 'Талрепы',
+                'code'        => 'turnbuckles',
+                'parent'      => 'rigging',
+                'description' => 'Талрепы для натяжения тросов, цепей и канатов. Типы: крюк-крюк, крюк-кольцо, кольцо-кольцо, вилка-вилка. Резьба M6–M30.',
+                'sort_order'  => 2,
+                'chars'       => [
+                    'Тип исполнения',
+                    'Резьба',
+                    'Рабочая нагрузка (кН)',
+                    'Материал',
+                    'Длина в открытом виде (мм)',
+                    'Вес (кг)',
+                ],
+            ],
+            [
+                'name'        => 'Стропы',
+                'code'        => 'slings',
+                'parent'      => 'rigging',
+                'description' => 'Текстильные петлевые стропы, канатные и цепные стропы для строповки грузов.',
+                'sort_order'  => 3,
+                'chars'       => [
+                    'Грузоподъёмность',
+                    'Длина',
+                    'Материал',
+                    'Количество ветвей',
+                    'Тип исполнения',
+                    'Диаметр/ширина',
+                    'Вес',
+                ],
+            ],
+
+            // ── ГРУЗОПОДЪЁМ ──
+            [
+                'name'        => 'Тали электрические',
+                'code'        => 'electric-hoists',
+                'parent'      => 'lifting-equipment',
+                'description' => 'Электрические цепные и канатные тали серий CD1 и MD.',
+                'sort_order'  => 1,
+                'chars'       => [
                     'Грузоподъёмность',
                     'Высота подъёма',
                     'Мощность двигателя',
@@ -29,9 +126,12 @@ class CategorySeeder extends Seeder
                 ],
             ],
             [
-                'name' => 'Тали ручные',
-                'code' => 'manual-hoists',
-                'characteristics' => [
+                'name'        => 'Тали ручные',
+                'code'        => 'manual-hoists',
+                'parent'      => 'lifting-equipment',
+                'description' => 'Ручные червячные, рычажные и шестерёнчатые тали.',
+                'sort_order'  => 2,
+                'chars'       => [
                     'Грузоподъёмность',
                     'Высота подъёма',
                     'Тип привода',
@@ -41,9 +141,12 @@ class CategorySeeder extends Seeder
                 ],
             ],
             [
-                'name' => 'Лебёдки',
-                'code' => 'winches',
-                'characteristics' => [
+                'name'        => 'Лебёдки',
+                'code'        => 'winches',
+                'parent'      => 'lifting-equipment',
+                'description' => 'Электрические и ручные лебёдки для промышленного применения.',
+                'sort_order'  => 3,
+                'chars'       => [
                     'Грузоподъёмность',
                     'Длина троса',
                     'Диаметр троса',
@@ -55,9 +158,12 @@ class CategorySeeder extends Seeder
                 ],
             ],
             [
-                'name' => 'Краны',
-                'code' => 'cranes',
-                'characteristics' => [
+                'name'        => 'Краны и кран-балки',
+                'code'        => 'cranes',
+                'parent'      => 'lifting-equipment',
+                'description' => 'Мостовые краны, подвесные кран-балки, консольные краны.',
+                'sort_order'  => 4,
+                'chars'       => [
                     'Грузоподъёмность',
                     'Пролёт',
                     'Высота подъёма',
@@ -67,23 +173,15 @@ class CategorySeeder extends Seeder
                     'Вес',
                 ],
             ],
+
+            // ── ГИДРАВЛИКА ──
             [
-                'name' => 'Стропы',
-                'code' => 'slings',
-                'characteristics' => [
-                    'Грузоподъёмность',
-                    'Длина',
-                    'Материал',
-                    'Количество ветвей',
-                    'Тип исполнения',
-                    'Диаметр/ширина',
-                    'Вес',
-                ],
-            ],
-            [
-                'name' => 'Домкраты',
-                'code' => 'jacks',
-                'characteristics' => [
+                'name'        => 'Домкраты',
+                'code'        => 'jacks',
+                'parent'      => 'hydraulic',
+                'description' => 'Гидравлические домкраты бутылочные и подкатные.',
+                'sort_order'  => 1,
+                'chars'       => [
                     'Грузоподъёмность',
                     'Высота подъёма',
                     'Начальная высота',
@@ -92,10 +190,15 @@ class CategorySeeder extends Seeder
                     'Вес',
                 ],
             ],
+
+            // ── СКЛАД ──
             [
-                'name' => 'Тележки',
-                'code' => 'trolleys',
-                'characteristics' => [
+                'name'        => 'Тележки',
+                'code'        => 'trolleys',
+                'parent'      => 'warehouse',
+                'description' => 'Ходовые тележки для талей, складские платформенные тележки.',
+                'sort_order'  => 1,
+                'chars'       => [
                     'Грузоподъёмность',
                     'Тип привода',
                     'Ширина полки двутавра',
@@ -106,22 +209,31 @@ class CategorySeeder extends Seeder
             ],
         ];
 
-        foreach ($categories as $cat) {
-            $categoryId = DB::table('categories')->insertGetId([
-                'name'       => $cat['name'],
-                'code'       => $cat['code'],
-                'created_at' => now(),
-                'updated_at' => now(),
+        $childIds = [];
+        foreach ($children as $child) {
+            $catId = DB::table('categories')->insertGetId([
+                'parent_id'   => $parentIds[$child['parent']],
+                'name'        => $child['name'],
+                'code'        => $child['code'],
+                'description' => $child['description'],
+                'image'       => null,
+                'sort_order'  => $child['sort_order'],
+                'created_at'  => now(),
+                'updated_at'  => now(),
             ]);
+            $childIds[$child['code']] = $catId;
 
-            foreach ($cat['characteristics'] as $charName) {
+            foreach ($child['chars'] as $charName) {
                 DB::table('characteristics')->insert([
-                    'category_id' => $categoryId,
+                    'category_id' => $catId,
                     'name'        => $charName,
                     'created_at'  => now(),
                     'updated_at'  => now(),
                 ]);
             }
         }
+
+        // Экспортируем для ProductSeeder
+        cache(['category_child_ids' => $childIds]);
     }
 }

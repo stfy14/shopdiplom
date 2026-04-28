@@ -1,6 +1,9 @@
 up:
 	docker compose up -d
 
+down:
+	docker compose down
+
 setup:
 	docker compose up -d
 	sleep 5

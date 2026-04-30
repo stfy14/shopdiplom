@@ -2,7 +2,7 @@
 import ShopLayout from '@/Layouts/ShopLayout.vue'
 import ProductCard from '@/Components/ProductCard.vue'
 import { Link, router } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
     category:    Object,
@@ -13,6 +13,16 @@ const props = defineProps({
 
 const search = ref(props.filters?.q ?? '')
 const sort   = ref(props.filters?.sort ?? 'default')
+const isSelectOpen = ref(false)
+
+const sortOptions = [
+    { value: 'default',    label: 'По умолчанию' },
+    { value: 'price_asc',  label: 'Сначала дешевле' },
+    { value: 'price_desc', label: 'Сначала дороже' },
+    { value: 'new',        label: 'Новинки' },
+]
+
+const currentSortLabel = computed(() => sortOptions.find(o => o.value === sort.value)?.label ?? 'По умолчанию')
 
 function applyFilters() {
     router.get(`/catalog/${props.category.code}`, {
@@ -21,12 +31,18 @@ function applyFilters() {
     }, { preserveState: true })
 }
 
-const sortOptions = [
-    { value: 'default',    label: 'По умолчанию' },
-    { value: 'price_asc',  label: 'Сначала дешевле' },
-    { value: 'price_desc', label: 'Сначала дороже' },
-    { value: 'new',        label: 'Новинки' },
-]
+function pickSort(value) {
+    sort.value = value
+    isSelectOpen.value = false
+    applyFilters()
+}
+
+function handleSearchKey(e) {
+    if (e.key === 'Enter') applyFilters()
+}
+
+// Закрытие при клике вне
+function closeSelect() { isSelectOpen.value = false }
 </script>
 
 <template>
@@ -45,7 +61,9 @@ const sortOptions = [
             <div>
                 <h1 class="text-2xl md:text-3xl font-black text-gray-900">{{ category.name }}</h1>
                 <p v-if="category.description" class="text-gray-500 text-sm mt-1 max-w-2xl">{{ category.description }}</p>
-                <p class="text-gray-400 text-sm mt-1 font-medium">{{ products.length }} {{ products.length === 1 ? 'товар' : products.length < 5 ? 'товара' : 'товаров' }}</p>
+                <p class="text-gray-400 text-sm mt-1 font-medium">
+                    {{ products.length }} {{ products.length === 1 ? 'товар' : products.length < 5 ? 'товара' : 'товаров' }}
+                </p>
             </div>
             <Link
                 v-if="category.parent"
@@ -59,6 +77,7 @@ const sortOptions = [
 
         <!-- Фильтры -->
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6 flex flex-col sm:flex-row gap-3">
+            <!-- Поиск -->
             <div class="relative flex-grow">
                 <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <input
@@ -66,19 +85,43 @@ const sortOptions = [
                     type="search"
                     placeholder="Поиск в разделе..."
                     class="w-full pl-10 pr-4 py-2.5 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm font-medium transition"
-                    @keydown.enter="applyFilters"
+                    @keydown="handleSearchKey"
                 />
             </div>
-            <select
-                v-model="sort"
-                @change="applyFilters"
-                class="px-4 py-2.5 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none text-sm font-bold text-gray-700 transition"
-            >
-                <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-            </select>
-            <button @click="applyFilters" class="px-5 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition flex-shrink-0">
-                Применить
-            </button>
+
+            <!-- Кастомный select сортировки (стиль как в ProductForm в AdminLayout) -->
+            <div class="relative flex-shrink-0 w-full sm:w-56" @click.stop>
+                <div v-if="isSelectOpen" @click.stop="closeSelect" class="fixed inset-0 z-10"></div>
+                <button
+                    @click.stop="isSelectOpen = !isSelectOpen"
+                    type="button"
+                    class="w-full px-4 py-2.5 bg-white rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-bold transition shadow-sm flex items-center justify-between text-gray-800 relative z-20"
+                >
+                    <span class="truncate">{{ currentSortLabel }}</span>
+                    <svg :class="['w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0 ml-2', isSelectOpen ? 'rotate-180' : '']" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <Transition
+                    enter-active-class="transition duration-100 ease-out"
+                    enter-from-class="transform scale-95 opacity-0"
+                    enter-to-class="transform scale-100 opacity-100"
+                    leave-active-class="transition duration-75 ease-in"
+                    leave-from-class="transform scale-100 opacity-100"
+                    leave-to-class="transform scale-95 opacity-0"
+                >
+                    <div v-if="isSelectOpen" class="absolute z-30 w-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+                        <button
+                            v-for="opt in sortOptions"
+                            :key="opt.value"
+                            @click="pickSort(opt.value)"
+                            type="button"
+                            :class="['w-full text-left px-4 py-2.5 text-sm font-bold transition flex items-center justify-between', sort === opt.value ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50']"
+                        >
+                            <span class="truncate">{{ opt.label }}</span>
+                            <svg v-if="sort === opt.value" class="w-4 h-4 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        </button>
+                    </div>
+                </Transition>
+            </div>
         </div>
 
         <!-- Товары -->

@@ -14,10 +14,6 @@ function clearNotification(productId) { router.patch(`/cart/${productId}/clear-n
 </script>
 
 <template>
-    <!-- 
-        Мобилка: fixed, отступы left-4 right-4, спавн под навбаром top-[76px].
-        Десктоп: absolute right-0 (прилипает к блоку кнопок), отступ от навбара mt-4. 
-    -->
     <div class="fixed sm:absolute left-4 right-4 top-[76px] sm:inset-auto sm:top-full sm:right-0 sm:mt-4 sm:w-[400px] bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 flex flex-col max-h-[calc(100vh-100px)] overflow-hidden cursor-default" @click.stop>
         
         <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between bg-white z-10 flex-shrink-0">
@@ -32,8 +28,15 @@ function clearNotification(productId) { router.patch(`/cart/${productId}/clear-n
 
         <div class="flex-grow overflow-y-auto bg-gray-50/30 p-2">
             <div v-if="normalizedItems.length === 0" class="flex flex-col items-center justify-center py-12 text-gray-400">
-                <div class="w-12 h-12 bg-white shadow-sm border border-gray-100 rounded-xl flex items-center justify-center mb-3">
-                    <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c.51 0 .962-.343 1.087-.835l1.823-6.44a1.125 1.125 0 00-.44-1.229l-5.432-4.075a1.125 1.125 0 00-1.518.056L5.64 5.39a1.125 1.125 0 00-.056 1.518l3.65 4.563M7.5 14.25L5.106 5.106M17.25 20.25a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zM7.5 20.25a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014 0z"/></svg>
+                <div class="w-16 h-16 bg-white shadow-sm border border-gray-100 rounded-2xl flex items-center justify-center mb-3">
+                    <!-- Грустный смайлик -->
+                    <svg class="w-9 h-9 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" stroke-linecap="round"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.5 15.5c.5-1 1.8-1.5 3.5-1.5s3 .5 3.5 1.5"/>
+                        <circle cx="9" cy="10" r="0.8" fill="currentColor" stroke="none"/>
+                        <circle cx="15" cy="10" r="0.8" fill="currentColor" stroke="none"/>
+                        <path stroke-linecap="round" d="M10 8.5c.3-.5.8-.8 1.5-.5M14 8.5c-.3-.5-.8-.8-1.5-.5" stroke-width="1"/>
+                    </svg>
                 </div>
                 <div class="font-bold text-sm text-gray-500">Корзина пуста</div>
                 <div class="text-[11px] text-gray-400 mt-1">Добавьте товары из каталога</div>

@@ -5,6 +5,7 @@ use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\CallbackController;
 use App\Http\Controllers\Admin;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,9 @@ Route::get('/search', [ProductController::class, 'index'])->name('search');
 
 // Страница товара
 Route::get('/product/{product}', [ProductController::class, 'show'])->name('product.show');
+
+// Запрос на звонок (публичный)
+Route::post('/callback', [CallbackController::class, 'store'])->name('callback.store');
 
 // ── Корзина и заказы (auth) ─────────────────────────────────────────────────
 Route::middleware('auth')->group(function () {
@@ -70,7 +74,12 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/orders/{order}/messages', [Admin\OrderController::class, 'sendMessage'])->name('orders.send-message');
     Route::patch('/orders/{order}/contacts', [Admin\OrderController::class, 'updateContacts'])->name('orders.contacts');
 
-    // Категории (новая иерархическая система)
+    // Запросы на звонок
+    Route::get('/callbacks', [Admin\CallbackController::class, 'index'])->name('callbacks');
+    Route::patch('/callbacks/{callback}/processed', [Admin\CallbackController::class, 'markProcessed'])->name('callbacks.processed');
+    Route::delete('/callbacks/{callback}', [Admin\CallbackController::class, 'destroy'])->name('callbacks.destroy');
+
+    // Категории
     Route::get('/categories', [Admin\CategoryController::class, 'index'])->name('categories');
     Route::post('/categories/parent', [Admin\CategoryController::class, 'storeParent'])->name('categories.store-parent');
     Route::post('/categories/child', [Admin\CategoryController::class, 'storeChild'])->name('categories.store-child');

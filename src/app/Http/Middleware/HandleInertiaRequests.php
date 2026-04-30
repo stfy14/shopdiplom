@@ -16,7 +16,7 @@ class HandleInertiaRequests extends Middleware
 
     public function share(Request $request): array
     {
-        $cartItems =[];
+        $cartItems = [];
         $cartCount = 0;
         $user = $request->user();
 
@@ -26,20 +26,20 @@ class HandleInertiaRequests extends Middleware
             $cartCount = $cart->sum('quantity');
         }
 
-        return[
+        return [
             ...parent::share($request),
             'auth' => [
                 'user' => $user,
             ],
             'cartCount' => $cartCount,
             'cartItems' => $cartItems,
-            'flash' =>[
-                'cart_added' => $request->session()->get('cart_added'),
+            'flash' => [
+                'cart_added'    => $request->session()->get('cart_added'),
+                'callback_sent' => $request->session()->get('callback_sent'),
             ],
-            
-            // ПЕРЕДАЕМ УВЕДОМЛЕНИЯ ИЗ БАЗЫ НА ФРОНТ
-            'notifications' => $user ? $user->notifications()->take(50)->get()->map(function($n) {
-                return[
+
+            'notifications' => $user ? $user->notifications()->take(50)->get()->map(function ($n) {
+                return [
                     'id'        => $n->id,
                     'message'   => $n->data['message'],
                     'type'      => $n->data['type'] ?? 'success',
@@ -50,9 +50,9 @@ class HandleInertiaRequests extends Middleware
                 ];
             }) : [],
 
-            'adminNotifications' => $user?->role === 'admin' ?[
-                'newOrders'    => \App\Models\Order::where('status', 'new')->count(),
-                'newMessages'  => \App\Models\Order::where('has_unseen_activity', true)
+            'adminNotifications' => $user?->role === 'admin' ? [
+                'newOrders'   => \App\Models\Order::where('status', 'new')->count(),
+                'newMessages' => \App\Models\Order::where('has_unseen_activity', true)
                     ->orWhereIn('id', function ($query) {
                         $query->select('order_id')
                             ->from('order_messages')

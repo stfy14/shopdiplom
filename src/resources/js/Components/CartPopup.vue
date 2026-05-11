@@ -35,7 +35,6 @@ function clearNotification(productId) { router.patch(`/cart/${productId}/clear-n
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8.5 15.5c.5-1 1.8-1.5 3.5-1.5s3 .5 3.5 1.5"/>
                         <circle cx="9" cy="10" r="0.8" fill="currentColor" stroke="none"/>
                         <circle cx="15" cy="10" r="0.8" fill="currentColor" stroke="none"/>
-                        <path stroke-linecap="round" d="M10 8.5c.3-.5.8-.8 1.5-.5M14 8.5c-.3-.5-.8-.8-1.5-.5" stroke-width="1"/>
                     </svg>
                 </div>
                 <div class="font-bold text-sm text-gray-500">Корзина пуста</div>

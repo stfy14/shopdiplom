@@ -26,6 +26,7 @@ function phoneInput(e) {
 
 function submitCallback() {
     form.post('/callback', {
+        preserveScroll: true,
         onSuccess: () => {
             callbackSent.value = true
             form.reset()

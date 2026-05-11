@@ -1,60 +1,73 @@
-.PHONY: up down setup
+# Makefile
+.PHONY: up down restart rebuild setup setup-fresh prod-build prod-up prod-down shell logs cache-clear test help
 
-# Просто запустить проект (когда он уже настроен)
+# === РАЗРАБОТКА ===
 up:
-	docker compose up -d
+	@docker compose up -d
 
-# Просто остановить проект
 down:
-	docker compose down
+	@docker compose down
 
-# ==============================================================================
-#  ГЛАВНАЯ КОМАНДА: ПОЛНАЯ АВТОМАТИЧЕСКАЯ УСТАНОВКА ПРОЕКТА С НУЛЯ
-# ==============================================================================
+restart:
+	@docker compose restart
+
+rebuild:
+	@docker compose build --no-cache
+
+# Первый запуск (с вопросом про очистку БД)
 setup:
-	@echo "1. Настройка .env файла..."
-	@if [ ! -f ./src/.env ]; then cp ./src/.env.example ./src/.env; echo "✅ .env создан"; fi
-	
-	@echo "--> Настройка БД и Reverb..."
-	@sed -i 's|^#*DB_CONNECTION=.*|DB_CONNECTION=pgsql|' ./src/.env
-	@sed -i 's|^#*DB_HOST=.*|DB_HOST=db|' ./src/.env
-	@sed -i 's|^#*DB_PORT=.*|DB_PORT=5432|' ./src/.env
-	@sed -i 's|^#*DB_DATABASE=.*|DB_DATABASE=shop_db|' ./src/.env
-	@sed -i 's|^#*DB_USERNAME=.*|DB_USERNAME=shop_user|' ./src/.env
-	@sed -i 's|^#*DB_PASSWORD=.*|DB_PASSWORD=secret|' ./src/.env
-	@sed -i 's|^#*BROADCAST_CONNECTION=.*|BROADCAST_CONNECTION=reverb|' ./src/.env
-	@sed -i 's|^#*REDIS_HOST=.*|REDIS_HOST=redis|' ./src/.env
+	@./scripts/setup.sh
 
-	@echo "--> Добавление ключей Reverb (если их нет)..."
-	@grep -q "REVERB_APP_ID" ./src/.env || ( \
-		echo "\n# Reverb Настройки" >> ./src/.env && \
-		echo "REVERB_APP_ID=12345" >> ./src/.env && \
-		echo "REVERB_APP_KEY=local_key" >> ./src/.env && \
-		echo "REVERB_APP_SECRET=local_secret" >> ./src/.env && \
-		echo "REVERB_HOST=localhost" >> ./src/.env && \
-		echo "REVERB_PORT=6001" >> ./src/.env && \
-		echo "REVERB_SCHEME=http" >> ./src/.env && \
-		echo "VITE_REVERB_APP_KEY=\$${REVERB_APP_KEY}" >> ./src/.env && \
-		echo "VITE_REVERB_HOST=\$${REVERB_HOST}" >> ./src/.env && \
-		echo "VITE_REVERB_PORT=\$${REVERB_PORT}" >> ./src/.env \
-	)
+# Принудительный сброс + настройка (без вопроса)
+setup-fresh:
+	@echo "⚠️  Полная переустановка с очисткой БД..."
+	@docker compose down -v
+	@./scripts/setup.sh
 
-	@echo "2. Запуск контейнеров..."
-	docker compose up -d
+# === ПРОДАКШЕН ===
+prod-build:
+	@docker compose -f docker-compose.prod.yml build --no-cache
 
-	@echo "3. Установка зависимостей и ключей..."
-	docker compose exec app composer install --no-interaction
-	docker compose exec app php artisan key:generate
-	
-	@echo "4. База данных (миграции и сиды)..."
-	@sleep 3
-	docker compose exec app php artisan migrate:fresh --seed --force
-	docker compose exec app php artisan storage:link
+prod-up:
+	@docker compose -f docker-compose.prod.yml up -d
 
-	@echo "5. Сборка фронтенда..."
-	docker compose run --rm node sh -c "npm install && npm run build"
+prod-down:
+	@docker compose -f docker-compose.prod.yml down
 
-	@echo "6. Права доступа..."
-	docker compose exec app chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
-	docker compose exec app chmod -R 775 /var/www/storage /var/www/bootstrap/cache
-	@echo "✅ Все готово! http://localhost:8080"
+prod-migrate:
+	@docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
+
+# === УТИЛИТЫ ===
+shell:
+	@docker compose exec app bash
+
+logs:
+	@docker compose logs -f app
+
+logs-all:
+	@docker compose logs -f
+
+cache-clear:
+	@docker compose exec app php artisan optimize:clear
+
+test:
+	@docker compose exec app php artisan test
+
+help:
+	@echo "📦 Laravel Docker — команды:"
+	@echo ""
+	@echo "Разработка:"
+	@echo "  make setup        ← первый запуск (спросит про БД)"
+	@echo "  make setup-fresh  ← полный сброс + настройка"
+	@echo "  make up/down      ← поднять/остановить"
+	@echo "  make shell        ← войти в контейнер"
+	@echo "  make logs         ← логи Laravel"
+	@echo ""
+	@echo "Продакшен:"
+	@echo "  make prod-build   ← собрать чистые образы"
+	@echo "  make prod-up      ← запустить прод"
+	@echo "  make prod-migrate ← применить миграции"
+	@echo ""
+	@echo "Утилиты:"
+	@echo "  make cache-clear  ← очистить кэш Laravel"
+	@echo "  make test         ← запустить тесты"

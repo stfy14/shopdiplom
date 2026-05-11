@@ -1,0 +1,11 @@
+# .dockerignore
+node_modules
+npm-debug.log
+vendor
+.git
+.idea
+.vscode
+storage/logs/*.log
+.phpunit.result.cache
+*.log
+.DS_Store

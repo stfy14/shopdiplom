@@ -1,26 +1,25 @@
-# docker-compose.yml
+# docker-compose.prod.yml
 services:
   app:
     build:
       context: .
       args:
-        INSTALL_DEV: "true"  # ← dev-пакеты ВКЛЮЧЕНЫ
-    volumes:
-      - ./src:/var/www:cached
+        INSTALL_DEV: "false"  # ← dev-пакеты ВЫКЛЮЧЕНЫ
+    # ⚠️ НЕТ volumes! Код уже внутри образа
     depends_on:
       - db
       - redis
     networks:
       - laravel
+    restart: unless-stopped
 
   reverb:
     build:
       context: .
       args:
-        INSTALL_DEV: "true"
+        INSTALL_DEV: "false"
     command: php artisan reverb:start --host=0.0.0.0 --port=6001
-    volumes:
-      - ./src:/var/www:cached
+    # ⚠️ НЕТ volumes!
     ports:
       - "6001:6001"
     depends_on:
@@ -28,31 +27,35 @@ services:
       - redis
     networks:
       - laravel
+    restart: unless-stopped
 
   nginx:
     image: nginx:alpine
     ports:
-      - "8080:80"
+      - "80:80"
+      - "443:443"  # если SSL
     volumes:
-      - ./src:/var/www
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      # Статику можно смонтировать отдельно, если нужно
+      # - ./src/public:/var/www/public:ro
     depends_on:
       - app
     networks:
       - laravel
+    restart: unless-stopped
 
   db:
     image: postgres:16
     environment:
-      POSTGRES_DB: shop_db
-      POSTGRES_USER: shop_user
-      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"  # только для локалки!
+    # ⚠️ НЕТ ports! БД не должна торчать наружу
     networks:
       - laravel
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -60,15 +63,7 @@ services:
       - redisdata:/data
     networks:
       - laravel
-
-  node:
-    image: node:20-alpine
-    working_dir: /var/www
-    volumes:
-      - ./src:/var/www
-    command: sh -c "npm install && npm run build"
-    networks:
-      - laravel
+    restart: unless-stopped
 
 networks:
   laravel:

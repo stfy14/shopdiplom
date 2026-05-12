@@ -10,7 +10,7 @@ function totalProducts(cat) {
     return cat.children?.reduce((sum, child) => sum + (child.products_count ?? 0), 0) ?? 0
 }
 
-const iconMap = {
+const themeMap = {
     'rigging':           { bg: 'bg-slate-50', border: 'border-slate-200', icon: 'bg-slate-100 text-slate-600', badge: 'bg-slate-100 text-slate-700' },
     'lifting-equipment': { bg: 'bg-blue-50',  border: 'border-blue-200',  icon: 'bg-blue-100 text-blue-600',  badge: 'bg-blue-100 text-blue-700' },
     'hydraulic':         { bg: 'bg-zinc-50',  border: 'border-zinc-200',  icon: 'bg-zinc-100 text-zinc-600',  badge: 'bg-zinc-100 text-zinc-700' },
@@ -38,29 +38,44 @@ const iconMap = {
             <div v-for="cat in categories" :key="cat.id">
                 <!-- Заголовок группы -->
                 <div class="flex items-center gap-4 mb-5">
-                    <div :class="['w-12 h-12 rounded-2xl flex items-center justify-center border flex-shrink-0', iconMap[cat.code]?.icon ?? 'bg-gray-100 text-gray-500', iconMap[cat.code]?.border ?? 'border-gray-200']">
-                        <!-- Такелаж -->
-                        <svg v-if="cat.code === 'rigging'" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
-                        </svg>
-                        <!-- Грузоподъём -->
-                        <svg v-else-if="cat.code === 'lifting-equipment'" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>
-                        </svg>
-                        <!-- Гидравлика -->
-                        <svg v-else-if="cat.code === 'hydraulic'" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z"/>
-                        </svg>
-                        <!-- Склад -->
-                        <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
-                        </svg>
+
+                    <!-- Картинка категории или SVG-заглушка -->
+                    <div :class="['w-12 h-12 rounded-2xl flex items-center justify-center border flex-shrink-0 overflow-hidden',
+                                  themeMap[cat.code]?.border ?? 'border-gray-200',
+                                  cat.image ? '' : (themeMap[cat.code]?.icon ?? 'bg-gray-100 text-gray-500')]">
+                        <img v-if="cat.image" :src="`/storage/${cat.image}`" :alt="cat.name" class="w-full h-full object-cover" />
+                        <template v-else>
+                            <!-- Такелаж -->
+                            <svg v-if="cat.code === 'rigging'" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
+                            </svg>
+                            <!-- Грузоподъём -->
+                            <svg v-else-if="cat.code === 'lifting-equipment'" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>
+                            </svg>
+                            <!-- Гидравлика -->
+                            <svg v-else-if="cat.code === 'hydraulic'" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z"/>
+                            </svg>
+                            <!-- Склад / дефолт -->
+                            <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
+                            </svg>
+                        </template>
                     </div>
+
                     <div class="flex-grow">
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-3 flex-wrap">
                             <h2 class="text-xl font-black text-gray-900">{{ cat.name }}</h2>
-                            <span :class="[iconMap[cat.code]?.badge ?? 'bg-gray-100 text-gray-600', 'text-[11px] font-bold px-2.5 py-1 rounded-lg']">
+                            <span :class="[themeMap[cat.code]?.badge ?? 'bg-gray-100 text-gray-600', 'text-[11px] font-bold px-2.5 py-1 rounded-lg']">
                                 {{ totalProducts(cat) }} товаров
+                            </span>
+                            <!-- ГОСТ / DIN бейджи -->
+                            <span v-if="cat.gost" class="text-[11px] font-bold px-2 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
+                                ГОСТ {{ cat.gost }}
+                            </span>
+                            <span v-if="cat.din" class="text-[11px] font-bold px-2 py-1 rounded-lg bg-sky-50 text-sky-700 border border-sky-200">
+                                DIN {{ cat.din }}
                             </span>
                         </div>
                         <p v-if="cat.description" class="text-sm text-gray-500 mt-0.5 line-clamp-1">{{ cat.description }}</p>
@@ -71,7 +86,7 @@ const iconMap = {
                     </Link>
                 </div>
 
-                <!-- Дочерние -->
+                <!-- Дочерние подкатегории -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <Link
                         v-for="child in cat.children"
@@ -79,12 +94,24 @@ const iconMap = {
                         :href="`/catalog/${child.code}`"
                         class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md hover:border-blue-100 hover:-translate-y-0.5 transition-all group flex flex-col"
                     >
-                        <div class="flex items-start justify-between mb-3">
+                        <!-- Картинка дочерней категории -->
+                        <div v-if="child.image" class="w-full h-28 mb-3 rounded-xl overflow-hidden bg-gray-50">
+                            <img :src="`/storage/${child.image}`" :alt="child.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        </div>
+
+                        <div class="flex items-start justify-between mb-2">
                             <h3 class="font-black text-gray-900 group-hover:text-blue-600 transition leading-snug pr-2">{{ child.name }}</h3>
                             <span class="text-[11px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg whitespace-nowrap flex-shrink-0">
                                 {{ child.products_count }} шт.
                             </span>
                         </div>
+
+                        <!-- ГОСТ / DIN для дочерней категории -->
+                        <div v-if="child.gost || child.din" class="flex gap-1.5 mb-2 flex-wrap">
+                            <span v-if="child.gost" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">ГОСТ {{ child.gost }}</span>
+                            <span v-if="child.din" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-50 text-sky-700">DIN {{ child.din }}</span>
+                        </div>
+
                         <p v-if="child.description" class="text-xs text-gray-500 leading-relaxed line-clamp-2 flex-grow">
                             {{ child.description }}
                         </p>

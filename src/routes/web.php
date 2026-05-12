@@ -79,8 +79,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::patch('/callbacks/{callback}/processed', [Admin\CallbackController::class, 'markProcessed'])->name('callbacks.processed');
     Route::delete('/callbacks/{callback}', [Admin\CallbackController::class, 'destroy'])->name('callbacks.destroy');
 
-    // Категории
+    // Категории (один универсальный метод store)
     Route::get('/categories', [Admin\CategoryController::class, 'index'])->name('categories');
+    Route::post('/categories', [Admin\CategoryController::class, 'store'])->name('categories.store');
+    // Оставляем старые роуты для обратной совместимости
     Route::post('/categories/parent', [Admin\CategoryController::class, 'storeParent'])->name('categories.store-parent');
     Route::post('/categories/child', [Admin\CategoryController::class, 'storeChild'])->name('categories.store-child');
     Route::put('/categories/{category}', [Admin\CategoryController::class, 'update'])->name('categories.update');

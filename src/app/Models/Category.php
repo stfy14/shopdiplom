@@ -5,7 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Category extends Model
 {
-    protected $fillable = ['name', 'code', 'parent_id', 'image', 'description', 'sort_order'];
+    protected $fillable = ['name', 'code', 'parent_id', 'image', 'description', 'sort_order', 'gost', 'din'];
 
     // Родительская категория
     public function parent()
@@ -13,10 +13,16 @@ class Category extends Model
         return $this->belongsTo(Category::class, 'parent_id');
     }
 
-    // Дочерние категории
+    // Дочерние категории (первый уровень)
     public function children()
     {
         return $this->hasMany(Category::class, 'parent_id')->orderBy('sort_order');
+    }
+
+    // Рекурсивные дочерние категории любой глубины
+    public function allChildren()
+    {
+        return $this->children()->with(['allChildren.allChildren.allChildren']);
     }
 
     // Товары прямо в этой категории
@@ -31,10 +37,34 @@ class Category extends Model
         return $this->hasMany(Characteristic::class);
     }
 
-    // Является ли категория родительской
-    public function isParent(): bool
+    // Является ли категория листовой (нет дочерних)
+    public function isLeaf(): bool
+    {
+        return !$this->children()->exists();
+    }
+
+    // Является ли категория корневой
+    public function isRoot(): bool
     {
         return is_null($this->parent_id);
+    }
+
+    // @deprecated - используй isRoot()
+    public function isParent(): bool
+    {
+        return $this->isRoot();
+    }
+
+    // Получить цепочку предков (от корня к текущей)
+    public function getAncestors(): array
+    {
+        $ancestors = [];
+        $current = $this->parent;
+        while ($current) {
+            array_unshift($ancestors, $current);
+            $current = $current->parent;
+        }
+        return $ancestors;
     }
 
     // URL картинки

@@ -9,7 +9,7 @@ use Inertia\Inertia;
 
 class CatalogController extends Controller
 {
-    // /catalog — главная страница каталога с родительскими категориями
+    // /catalog — главная страница каталога с корневыми категориями
     public function index()
     {
         $categories = Category::with(['children' => function ($q) {
@@ -25,29 +25,36 @@ class CatalogController extends Controller
         ]);
     }
 
-    // /catalog/{slug} — страница категории:
-    //   - если родительская: показываем подкатегории
-    //   - если дочерняя: показываем товары с фильтрами
+    // /catalog/{slug} — страница категории любой глубины:
+    //   - если есть дочерние → показываем их
+    //   - если листовая → показываем товары с фильтрами
     public function show(Request $request, string $slug)
     {
-        $category = Category::with(['parent', 'children.characteristics', 'characteristics'])
+        $category = Category::with(['parent.parent.parent', 'characteristics'])
             ->where('code', $slug)
             ->firstOrFail();
 
-        // Родительская категория — показываем детей
-        if ($category->isParent()) {
+        $breadcrumbs = $this->buildBreadcrumbs($category);
+
+        // Если есть дочерние категории — показываем их (любая глубина)
+        if ($category->children()->exists()) {
             $children = $category->children()
                 ->withCount(['products' => fn($q) => $q->where('is_deleted', false)])
+                ->with(['children' => fn($q) => $q
+                    ->withCount(['products' => fn($p) => $p->where('is_deleted', false)])
+                    ->orderBy('sort_order')
+                ])
                 ->orderBy('sort_order')
                 ->get();
 
             return Inertia::render('Catalog/Parent', [
-                'category' => $category,
-                'children' => $children,
+                'category'    => $category,
+                'children'    => $children,
+                'breadcrumbs' => $breadcrumbs,
             ]);
         }
 
-        // Дочерняя категория — показываем товары
+        // Листовая категория — показываем товары
         $q = Product::with('category')
             ->where('category_id', $category->id)
             ->where('is_deleted', false);
@@ -69,18 +76,28 @@ class CatalogController extends Controller
 
         $products = $q->get();
 
-        // Breadcrumbs: Каталог > Родитель > Текущая
-        $breadcrumbs = [
-            ['title' => 'Каталог', 'href' => '/catalog'],
-            ['title' => $category->parent->name, 'href' => '/catalog/' . $category->parent->code],
-            ['title' => $category->name, 'href' => null],
-        ];
-
         return Inertia::render('Catalog/Show', [
             'category'    => $category,
             'products'    => $products,
             'breadcrumbs' => $breadcrumbs,
             'filters'     => $request->only(['q', 'sort']),
         ]);
+    }
+
+    // Построить хлебные крошки от корня до текущей категории
+    private function buildBreadcrumbs(Category $category, bool $currentAsLink = false): array
+    {
+        $crumbs = [['title' => 'Каталог', 'href' => '/catalog']];
+
+        foreach ($category->getAncestors() as $ancestor) {
+            $crumbs[] = ['title' => $ancestor->name, 'href' => '/catalog/' . $ancestor->code];
+        }
+
+        $crumbs[] = [
+            'title' => $category->name,
+            'href'  => $currentAsLink ? '/catalog/' . $category->code : null,
+        ];
+
+        return $crumbs;
     }
 }

@@ -15,7 +15,7 @@ const search = ref(props.filters?.q ?? '')
 const sort   = ref(props.filters?.sort ?? 'default')
 const isSelectOpen = ref(false)
 
-const sortOptions = [
+const sortOptions =[
     { value: 'default',    label: 'По умолчанию' },
     { value: 'price_asc',  label: 'Сначала дешевле' },
     { value: 'price_desc', label: 'Сначала дороже' },
@@ -89,7 +89,7 @@ function closeSelect() { isSelectOpen.value = false }
                 />
             </div>
 
-            <!-- Кастомный select сортировки (стиль как в ProductForm в AdminLayout) -->
+            <!-- Кастомный select сортировки -->
             <div class="relative flex-shrink-0 w-full sm:w-56" @click.stop>
                 <div v-if="isSelectOpen" @click.stop="closeSelect" class="fixed inset-0 z-10"></div>
                 <button
@@ -129,11 +129,18 @@ function closeSelect() { isSelectOpen.value = false }
             <ProductCard v-for="product in products" :key="product.id" :product="product" />
         </div>
 
-        <!-- Пусто -->
+        <!-- Пусто (обновленный дизайн) -->
         <div v-else class="text-center bg-white rounded-3xl py-20 shadow-sm border border-gray-100">
-            <div class="text-5xl mb-4">🔍</div>
-            <div class="text-gray-500 font-bold text-lg">По вашему запросу ничего не найдено</div>
-            <button @click="search = ''; applyFilters()" class="mt-4 text-blue-600 font-bold hover:underline text-sm">Сбросить фильтры</button>
+            <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+                </svg>
+            </div>
+            <div class="text-gray-700 font-black text-lg mb-1">Ничего не найдено</div>
+            <div class="text-gray-400 text-sm mb-5">По вашему запросу нет товаров. Попробуйте изменить параметры.</div>
+            <button @click="search = ''; applyFilters()" class="px-6 py-2.5 bg-gray-900 text-white font-bold rounded-xl text-sm hover:bg-gray-800 transition shadow-sm">
+                Сбросить фильтры
+            </button>
         </div>
     </ShopLayout>
 </template>

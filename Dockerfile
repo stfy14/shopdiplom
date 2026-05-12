@@ -20,18 +20,18 @@ WORKDIR /var/www
 
 # Зависимости (ключевой момент!)
 # Копируем сначала манифесты — для кэша слоёв
-COPY composer.json composer.lock ./
+COPY src/composer.json src/composer.lock ./
 
 # Флаг --no-dev контролируется через ARG
 ARG INSTALL_DEV=false
 RUN if [ "$INSTALL_DEV" = "true" ]; then \
-        composer install --no-interaction --no-progress; \
+        composer install --no-interaction --no-progress --no-scripts; \
     else \
-        composer install --no-dev --optimize-autoloader --classmap-authoritative --no-interaction --no-progress; \
+        composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts; \
     fi
 
 # Исходный код
-COPY . .
+COPY src/ .
 
 # Права доступа
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
